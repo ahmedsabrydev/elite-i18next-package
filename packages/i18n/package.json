@@ -1,0 +1,43 @@
+{
+  "name": "@faang/i18n",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=22" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./react": { "types": "./dist/react/index.d.ts", "import": "./dist/react/index.js" },
+    "./next": { "types": "./dist/next/index.d.ts", "import": "./dist/next/index.js" },
+    "./vite": { "types": "./dist/vite/index.d.ts", "import": "./dist/vite/index.js" },
+    "./zustand": { "types": "./dist/store/zustand.d.ts", "import": "./dist/store/zustand.js" },
+    "./redux": { "types": "./dist/store/redux.d.ts", "import": "./dist/store/redux.js" },
+    "./native": { "types": "./dist/stubs/native.d.ts", "import": "./dist/stubs/native.js" },
+    "./node": { "types": "./dist/stubs/node.d.ts", "import": "./dist/stubs/node.js" },
+    "./electron": { "types": "./dist/stubs/electron.d.ts", "import": "./dist/stubs/electron.js" },
+    "./catalogs/*": "./catalogs/*",
+    "./cli": { "types": "./dist/cli/index.d.ts", "import": "./dist/cli/index.js" }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "budget": "node scripts/check-budget.mjs"
+  },
+  "peerDependencies": {
+    "i18next": "^26.0.0",
+    "react": "^19.0.0",
+    "react-i18next": "^17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-i18next": { "optional": true }
+  },
+  "devDependencies": {
+    "i18next": "26.4.2",
+    "react": "19.3.0",
+    "react-i18next": "17.0.14",
+    "@types/react": "19.2.2",
+    "vitest": "5.0.0",
+    "tsup": "8.3.5"
+  }
+}
