@@ -1,0 +1,22 @@
+{
+  "name": "faang-i18n-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "i18n:extract": "i18next-cli extract",
+    "i18n:status": "i18next-cli status",
+    "i18n:lint": "i18next-cli lint",
+    "budget": "turbo run budget"
+  },
+  "devDependencies": {
+    "turbo": "2.10.12",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0",
+    "i18next-cli": "1.73.2",
+    "@types/node": "22.10.2"
+  }
+}
