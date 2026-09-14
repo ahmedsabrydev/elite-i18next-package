@@ -61,6 +61,15 @@ describe('LruCache', () => {
     expect(c.get('b')).toBe(2)
   })
 
+  it('evicts correctly when a stored key is undefined', () => {
+    const c = new LruCache<string | undefined, number>(1)
+    c.set(undefined, 1)
+    c.set('a', 2)
+    expect(c.size()).toBe(1)
+    expect(c.has('a')).toBe(true)
+    expect(c.has(undefined)).toBe(false)
+  })
+
   it('reflects promotion order in keys() after a get', () => {
     const c = new LruCache<string, number>(2)
     c.set('a', 1)
