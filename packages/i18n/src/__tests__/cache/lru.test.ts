@@ -50,4 +50,26 @@ describe('LruCache', () => {
     expect(c.size()).toBe(1)
     expect(c.get('a')).toBe(2)
   })
+
+  it('evicts the first key when capacity is 1', () => {
+    const c = new LruCache<string, number>(1)
+    c.set('a', 1)
+    c.set('b', 2)
+    expect(c.size()).toBe(1)
+    expect(c.has('a')).toBe(false)
+    expect(c.has('b')).toBe(true)
+    expect(c.get('b')).toBe(2)
+  })
+
+  it('reflects promotion order in keys() after a get', () => {
+    const c = new LruCache<string, number>(2)
+    c.set('a', 1)
+    c.set('b', 2)
+    c.get('a')
+    expect(c.keys()).toEqual(['b', 'a'])
+  })
+
+  it.each([0, -1, 1.5])('throws RangeError for invalid capacity %s', (capacity) => {
+    expect(() => new LruCache<string, number>(capacity)).toThrow(RangeError)
+  })
 })

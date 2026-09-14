@@ -3,6 +3,9 @@ export class LruCache<K, V> {
   readonly #map = new Map<K, V>()
 
   constructor(capacity: number) {
+    if (!Number.isInteger(capacity) || capacity < 1) {
+      throw new RangeError(`LruCache capacity must be an integer >= 1, received ${capacity}`)
+    }
     this.#capacity = capacity
   }
 
@@ -22,9 +25,9 @@ export class LruCache<K, V> {
     if (this.#map.has(key)) this.#map.delete(key)
     this.#map.set(key, value)
     while (this.#map.size > this.#capacity) {
-      const oldest = this.#map.keys().next().value
-      if (oldest === undefined) break
-      this.#map.delete(oldest)
+      const oldest = this.#map.keys().next()
+      if (oldest.done) break
+      this.#map.delete(oldest.value)
     }
   }
 
