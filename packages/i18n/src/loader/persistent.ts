@@ -5,6 +5,7 @@ const STORE_NAME = 'namespaces'
 const DB_VERSION = 1
 
 type CachedRecord = {
+  id: string
   lng: string
   ns: string
   hash?: string
@@ -31,6 +32,7 @@ export class PersistentStore {
         }
         request.onsuccess = () => resolve(request.result)
         request.onerror = () => resolve(undefined)
+        request.onblocked = () => resolve(undefined)
       } catch {
         resolve(undefined)
       }
@@ -38,20 +40,36 @@ export class PersistentStore {
     return this.#dbPromise
   }
 
-  async get(lng: string, ns: string): Promise<NamespaceResources | undefined> {
+  async get(
+    lng: string,
+    ns: string,
+    hash?: string,
+  ): Promise<NamespaceResources | undefined> {
     const db = await this.#open()
     if (!db) return undefined
     return new Promise((resolve) => {
+      let settled = false
+      const settle = (value: NamespaceResources | undefined) => {
+        if (settled) return
+        settled = true
+        resolve(value)
+      }
       try {
         const tx = db.transaction(STORE_NAME, 'readonly')
         const req = tx.objectStore(STORE_NAME).get(`${lng}:${ns}`)
         req.onsuccess = () => {
           const record = req.result as CachedRecord | undefined
-          resolve(record?.resources)
+          if (record && hash !== undefined && record.hash !== hash) {
+            settle(undefined)
+            return
+          }
+          settle(record?.resources)
         }
-        req.onerror = () => resolve(undefined)
+        req.onerror = () => settle(undefined)
+        tx.onerror = () => settle(undefined)
+        tx.onabort = () => settle(undefined)
       } catch {
-        resolve(undefined)
+        settle(undefined)
       }
     })
   }
@@ -60,13 +78,20 @@ export class PersistentStore {
     const db = await this.#open()
     if (!db) return
     await new Promise<void>((resolve) => {
+      let settled = false
+      const settle = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
       try {
         const tx = db.transaction(STORE_NAME, 'readwrite')
         tx.objectStore(STORE_NAME).put({ id: `${lng}:${ns}`, lng, ns, hash, resources })
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => resolve()
+        tx.oncomplete = settle
+        tx.onerror = settle
+        tx.onabort = settle
       } catch {
-        resolve()
+        settle()
       }
     })
   }
@@ -75,13 +100,20 @@ export class PersistentStore {
     const db = await this.#open()
     if (!db) return
     await new Promise<void>((resolve) => {
+      let settled = false
+      const settle = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
       try {
         const tx = db.transaction(STORE_NAME, 'readwrite')
         tx.objectStore(STORE_NAME).clear()
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => resolve()
+        tx.oncomplete = settle
+        tx.onerror = settle
+        tx.onabort = settle
       } catch {
-        resolve()
+        settle()
       }
     })
   }

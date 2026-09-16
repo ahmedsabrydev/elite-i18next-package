@@ -29,4 +29,12 @@ describe('MemoryStore', () => {
     store.set('en', 'b', {})
     expect(store.entries()).toBe(2)
   })
+
+  it('evicts the oldest entry when the LRU bound is exceeded', () => {
+    const store = new MemoryStore()
+    for (let i = 0; i < 51; i++) store.set('en', `ns${i}`, { i })
+    expect(store.entries()).toBe(50)
+    expect(store.has('en', 'ns0')).toBe(false)
+    expect(store.get('en', 'ns50')).toEqual({ i: 50 })
+  })
 })
