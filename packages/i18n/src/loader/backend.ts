@@ -91,12 +91,18 @@ export class TieredBackend {
       )
       if (!resources) return undefined
       this.#memory.set(lng, ns, resources)
+      let bytes: number | undefined
+      try {
+        bytes = JSON.stringify(resources).length
+      } catch {
+        bytes = undefined
+      }
       emit(this.#config.onEvent, {
         type: 'ns.load',
         lng,
         ns,
         ms: Date.now() - startedAt,
-        bytes: JSON.stringify(resources).length,
+        bytes,
       })
       return resources
     } catch (error) {

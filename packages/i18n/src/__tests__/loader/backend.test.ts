@@ -102,4 +102,20 @@ describe('TieredBackend', () => {
     expect(backend.inflightCount()).toBeGreaterThan(0)
     await p
   })
+
+  it('does not fail a successful load when resources are not JSON-serializable', async () => {
+    const onEvent = vi.fn()
+    const circular: Record<string, unknown> = { hello: 'world' }
+    circular.self = circular
+    const { backend, memory } = makeBackend({
+      config: { ...config, onEvent },
+      loader: async () => circular,
+    })
+
+    await expect(backend.load('en', 'common')).resolves.toBe(circular)
+    expect(memory.has('en', 'common')).toBe(true)
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ns.load', lng: 'en', ns: 'common', bytes: undefined }),
+    )
+  })
 })
