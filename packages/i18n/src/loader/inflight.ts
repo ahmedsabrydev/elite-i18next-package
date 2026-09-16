@@ -7,9 +7,18 @@ type InflightOptions = {
 }
 
 export class TimeoutError extends Error {
-  constructor(key: string, ms: number) {
+  readonly key: string
+  readonly ms: number
+  readonly lng?: string
+  readonly ns?: string
+
+  constructor(key: string, ms: number, meta: { lng?: string; ns?: string } = {}) {
     super(`i18n load timeout for "${key}" after ${ms}ms`)
     this.name = 'TimeoutError'
+    this.key = key
+    this.ms = ms
+    this.lng = meta.lng
+    this.ns = meta.ns
   }
 }
 
@@ -25,11 +34,15 @@ export class InflightLoader {
     this.#retryDelayMs = options.retryDelayMs ?? LOADER.retryDelayMs
   }
 
-  run<T>(key: string, task: () => Promise<T>): Promise<T> {
+  run<T>(
+    key: string,
+    task: () => Promise<T>,
+    meta: { lng?: string; ns?: string } = {},
+  ): Promise<T> {
     const existing = this.#inflight.get(key)
     if (existing) return existing as Promise<T>
 
-    const promise = this.#withRetry(key, task).finally(() => {
+    const promise = this.#withRetry(key, task, meta).finally(() => {
       this.#inflight.delete(key)
     })
     this.#inflight.set(key, promise)
@@ -40,11 +53,15 @@ export class InflightLoader {
     return this.#inflight.size
   }
 
-  async #withRetry<T>(key: string, task: () => Promise<T>): Promise<T> {
+  async #withRetry<T>(
+    key: string,
+    task: () => Promise<T>,
+    meta: { lng?: string; ns?: string },
+  ): Promise<T> {
     let lastError: unknown
     for (let attempt = 0; attempt <= this.#retries; attempt += 1) {
       try {
-        return await this.#withTimeout(key, task)
+        return await this.#withTimeout(key, task, meta)
       } catch (error) {
         lastError = error
         if (attempt < this.#retries) {
@@ -55,11 +72,15 @@ export class InflightLoader {
     throw lastError
   }
 
-  #withTimeout<T>(key: string, task: () => Promise<T>): Promise<T> {
+  #withTimeout<T>(
+    key: string,
+    task: () => Promise<T>,
+    meta: { lng?: string; ns?: string },
+  ): Promise<T> {
     if (this.#timeoutMs <= 0) return task()
     let timer: ReturnType<typeof setTimeout> | undefined
     const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new TimeoutError(key, this.#timeoutMs)), this.#timeoutMs)
+      timer = setTimeout(() => reject(new TimeoutError(key, this.#timeoutMs, meta)), this.#timeoutMs)
     })
     return Promise.race([task(), timeout]).finally(() => {
       if (timer) clearTimeout(timer)

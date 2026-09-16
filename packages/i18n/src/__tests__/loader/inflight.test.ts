@@ -66,6 +66,14 @@ describe('InflightLoader', () => {
     await expect(loader.run('a', task)).rejects.toThrow(/timeout/i)
   })
 
+  it('carries structured lng, ns and ms on timeout', async () => {
+    const loader = new InflightLoader({ timeoutMs: 10, retries: 0 })
+    const task = () => new Promise<string>((res) => setTimeout(() => res('late'), 200))
+    await expect(
+      loader.run('en:common', task, { lng: 'en', ns: 'common' }),
+    ).rejects.toMatchObject({ name: 'TimeoutError', key: 'en:common', lng: 'en', ns: 'common', ms: 10 })
+  })
+
   it('rejects immediately when timeout is exhausted', async () => {
     const loader = new InflightLoader({ timeoutMs: 5200, retries: 0, retryDelayMs: 0 })
     const task = vi.fn().mockRejectedValue(new Error('nope'))
