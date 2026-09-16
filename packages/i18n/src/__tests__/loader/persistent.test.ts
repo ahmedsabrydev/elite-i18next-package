@@ -3,7 +3,12 @@ import { PersistentStore } from '../../loader/persistent'
 
 type FakeOptions = {
   blockOpen?: boolean
+  errorOnOpen?: boolean
+  errorOnGet?: boolean
+  abortOnGet?: boolean
+  errorOnSet?: boolean
   abortOnSet?: boolean
+  errorOnClear?: boolean
   abortOnClear?: boolean
 }
 
@@ -34,10 +39,14 @@ function createFakeIndexedDB(options: FakeOptions = {}) {
           get: (key: string) => {
             tx.op = 'get'
             const req = request()
-            queueMicrotask(() => {
-              req.result = data.get(key)
-              req.onsuccess?.()
-            })
+            if (options.errorOnGet) {
+              queueMicrotask(() => req.onerror?.())
+            } else if (!options.abortOnGet) {
+              queueMicrotask(() => {
+                req.result = data.get(key)
+                req.onsuccess?.()
+              })
+            }
             return req
           },
           put: (value: { id: string }) => {
@@ -53,9 +62,15 @@ function createFakeIndexedDB(options: FakeOptions = {}) {
         }),
       }
       queueMicrotask(() => {
-        const abort =
-          (tx.op === 'put' && options.abortOnSet) || (tx.op === 'clear' && options.abortOnClear)
-        if (abort) tx.onabort?.()
+        const op = tx.op
+        if (op === 'get') {
+          if (options.abortOnGet) tx.onabort?.()
+          return
+        }
+        const failed = (op === 'put' && options.errorOnSet) || (op === 'clear' && options.errorOnClear)
+        const aborted = (op === 'put' && options.abortOnSet) || (op === 'clear' && options.abortOnClear)
+        if (failed) tx.onerror?.()
+        else if (aborted) tx.onabort?.()
         else tx.oncomplete?.()
       })
       return tx
@@ -68,6 +83,10 @@ function createFakeIndexedDB(options: FakeOptions = {}) {
       queueMicrotask(() => {
         if (options.blockOpen) {
           req.onblocked?.()
+          return
+        }
+        if (options.errorOnOpen) {
+          req.onerror?.()
           return
         }
         req.result = makeDb()
@@ -159,6 +178,56 @@ describe('PersistentStore with indexedDB', () => {
 
   it('resolves clear when the transaction aborts', async () => {
     await withFakeIndexedDB({ abortOnClear: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.clear()).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves undefined for get when open errors', async () => {
+    await withFakeIndexedDB({ errorOnOpen: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.get('en', 'common')).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves set when open errors', async () => {
+    await withFakeIndexedDB({ errorOnOpen: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.set('en', 'common', { save: 'Save' })).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves clear when open errors', async () => {
+    await withFakeIndexedDB({ errorOnOpen: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.clear()).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves undefined when the get request errors', async () => {
+    await withFakeIndexedDB({ errorOnGet: true }, async () => {
+      const store = new PersistentStore()
+      await store.set('en', 'common', { save: 'Save' })
+      await expect(store.get('en', 'common')).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves undefined when the get transaction aborts', async () => {
+    await withFakeIndexedDB({ abortOnGet: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.get('en', 'common')).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves set when the transaction errors', async () => {
+    await withFakeIndexedDB({ errorOnSet: true }, async () => {
+      const store = new PersistentStore()
+      await expect(store.set('en', 'common', { save: 'Save' })).resolves.toBeUndefined()
+    })
+  })
+
+  it('resolves clear when the transaction errors', async () => {
+    await withFakeIndexedDB({ errorOnClear: true }, async () => {
       const store = new PersistentStore()
       await expect(store.clear()).resolves.toBeUndefined()
     })
