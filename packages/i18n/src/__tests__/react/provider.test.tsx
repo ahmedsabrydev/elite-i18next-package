@@ -1,7 +1,7 @@
 import { render, screen, renderHook, act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createI18n } from '../../core/create-i18n'
-import { I18nProvider, useLocale, useT } from '../../react'
+import { I18nProvider, Trans, useLocale, useT } from '../../react'
 
 function setup(locale = 'ar') {
   const runtime = createI18n({
@@ -60,5 +60,18 @@ describe('I18nProvider', () => {
 
   it('throws outside the provider', () => {
     expect(() => renderHook(() => useLocale())).toThrow(/I18nProvider/)
+  })
+
+  it('Trans renders the provider locale translation for ar', async () => {
+    const { runtime } = setup('ar')
+    await runtime.loadNamespace('ar', 'common')
+    render(
+      <I18nProvider runtime={runtime} locale="ar">
+        <span data-testid="trans">
+          <Trans i18nKey="hello" />
+        </span>
+      </I18nProvider>,
+    )
+    expect(screen.getByTestId('trans').textContent).toBe('مرحبا')
   })
 })
