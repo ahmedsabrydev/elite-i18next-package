@@ -1,0 +1,18 @@
+{
+  "app": { "name": "Acme", "tagline": "Ship faster" },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "loading": "Loading…"
+  },
+  "nav": { "home": "Home", "settings": "Settings", "billing": "Billing", "signOut": "Sign out" },
+  "empty": { "title": "Nothing here yet", "body": "Get started by creating your first item." },
+  "language": { "label": "Language", "en": "English", "ar": "العربية" }
+}
