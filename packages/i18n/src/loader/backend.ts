@@ -1,4 +1,4 @@
-import type { NamespaceResources, ResolvedConfig } from '../core/types'
+import type { DefaultLocale, NamespaceResources, ResolvedConfig } from '../core/types'
 import { emit } from '../obs/events'
 import { InflightLoader, TimeoutError } from './inflight'
 import { MemoryStore } from './memory'
@@ -9,8 +9,8 @@ export type NamespaceLoader = (
   ns: string,
 ) => Promise<NamespaceResources | undefined>
 
-export type TieredBackendOptions = {
-  config: ResolvedConfig
+export type TieredBackendOptions<L extends string = DefaultLocale> = {
+  config: ResolvedConfig<L>
   memory?: MemoryStore
   persistent?: PersistentStore
   inflight?: InflightLoader
@@ -18,7 +18,9 @@ export type TieredBackendOptions = {
   fetcher?: typeof fetch
 }
 
-export function namespaceChunkLoader(config: ResolvedConfig): NamespaceLoader {
+export function namespaceChunkLoader<L extends string = DefaultLocale>(
+  config: ResolvedConfig<L>,
+): NamespaceLoader {
   const { public: publicPath, shared } = config.catalogs
   return async (lng, ns) => {
     const candidates = shared
@@ -45,14 +47,14 @@ export function namespaceChunkLoader(config: ResolvedConfig): NamespaceLoader {
   }
 }
 
-export class TieredBackend {
-  readonly #config: ResolvedConfig
+export class TieredBackend<L extends string = DefaultLocale> {
+  readonly #config: ResolvedConfig<L>
   readonly #memory: MemoryStore
   readonly #persistent: PersistentStore
   readonly #inflight: InflightLoader
   readonly #loader: NamespaceLoader
 
-  constructor(options: TieredBackendOptions) {
+  constructor(options: TieredBackendOptions<L>) {
     this.#config = options.config
     this.#memory = options.memory ?? new MemoryStore()
     this.#persistent = options.persistent ?? new PersistentStore()

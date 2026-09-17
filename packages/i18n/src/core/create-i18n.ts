@@ -4,20 +4,14 @@ import { DEFAULT_LOCALE } from './defaults'
 import { dirFor, resolveLocale } from './locale'
 import { resolveConfig } from './resolve-config'
 import { TieredBackend } from '../loader/backend'
-import type {
-  CreateI18nConfig,
-  DefaultLocale,
-  I18nRuntime,
-  Namespace,
-  ResolvedConfig,
-} from './types'
+import type { CreateI18nConfig, DefaultLocale, I18nRuntime, Namespace } from './types'
 
 export function createI18n<L extends string = DefaultLocale>(
   config: CreateI18nConfig<L>,
 ): I18nRuntime<L> {
   const resolved = resolveConfig(config)
   const backend = new TieredBackend({
-    config: resolved as ResolvedConfig,
+    config: resolved,
     loader: resolved.backend
       ? async (lng, ns) => (await resolved.backend?.load(lng, ns)) as NamespaceResources | undefined
       : undefined,
