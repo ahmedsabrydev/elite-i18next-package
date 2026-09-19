@@ -1,12 +1,16 @@
 {
+  "labels": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
   "relative": {
-    "now": "just now",
-    "minutesAgo_one": "{{count}} minute ago",
-    "minutesAgo_other": "{{count}} minutes ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
     "hoursAgo_one": "{{count}} hour ago",
     "hoursAgo_other": "{{count}} hours ago",
-    "daysAgo_one": "{{count}} day ago",
-    "daysAgo_other": "{{count}} days ago"
-  },
-  "labels": { "today": "Today", "yesterday": "Yesterday", "tomorrow": "Tomorrow" }
+    "minutesAgo_one": "{{count}} minute ago",
+    "minutesAgo_other": "{{count}} minutes ago",
+    "now": "just now"
+  }
 }

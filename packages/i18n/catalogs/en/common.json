@@ -1,18 +1,33 @@
 {
-  "app": { "name": "Acme", "tagline": "Ship faster" },
   "actions": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "confirm": "Confirm",
-    "retry": "Retry",
-    "close": "Close",
     "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "loading": "Loading…",
     "next": "Next",
-    "search": "Search",
-    "loading": "Loading…"
+    "retry": "Retry",
+    "save": "Save",
+    "search": "Search"
   },
-  "nav": { "home": "Home", "settings": "Settings", "billing": "Billing", "signOut": "Sign out" },
-  "empty": { "title": "Nothing here yet", "body": "Get started by creating your first item." },
-  "language": { "label": "Language", "en": "English", "ar": "العربية" }
+  "app": {
+    "name": "Acme",
+    "tagline": "Ship faster"
+  },
+  "empty": {
+    "body": "Get started by creating your first item.",
+    "title": "Nothing here yet"
+  },
+  "language": {
+    "ar": "العربية",
+    "en": "English",
+    "label": "Language"
+  },
+  "nav": {
+    "billing": "Billing",
+    "home": "Home",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  }
 }

@@ -1,24 +1,28 @@
 {
+  "labels": {
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "yesterday": "أمس"
+  },
   "relative": {
-    "now": "الآن",
-    "minutesAgo_zero": "الآن",
-    "minutesAgo_one": "منذ دقيقة",
-    "minutesAgo_two": "منذ دقيقتين",
-    "minutesAgo_few": "منذ {{count}} دقائق",
-    "minutesAgo_many": "منذ {{count}} دقيقة",
-    "minutesAgo_other": "منذ {{count}} دقيقة",
+    "daysAgo_zero": "اليوم",
+    "daysAgo_one": "منذ يوم",
+    "daysAgo_two": "منذ يومين",
+    "daysAgo_few": "منذ {{count}} أيام",
+    "daysAgo_many": "منذ {{count}} يومًا",
+    "daysAgo_other": "منذ {{count}} يوم",
     "hoursAgo_zero": "الآن",
     "hoursAgo_one": "منذ ساعة",
     "hoursAgo_two": "منذ ساعتين",
     "hoursAgo_few": "منذ {{count}} ساعات",
     "hoursAgo_many": "منذ {{count}} ساعة",
     "hoursAgo_other": "منذ {{count}} ساعة",
-    "daysAgo_zero": "اليوم",
-    "daysAgo_one": "منذ يوم",
-    "daysAgo_two": "منذ يومين",
-    "daysAgo_few": "منذ {{count}} أيام",
-    "daysAgo_many": "منذ {{count}} يومًا",
-    "daysAgo_other": "منذ {{count}} يوم"
-  },
-  "labels": { "today": "اليوم", "yesterday": "أمس", "tomorrow": "غدًا" }
+    "minutesAgo_zero": "الآن",
+    "minutesAgo_one": "منذ دقيقة",
+    "minutesAgo_two": "منذ دقيقتين",
+    "minutesAgo_few": "منذ {{count}} دقائق",
+    "minutesAgo_many": "منذ {{count}} دقيقة",
+    "minutesAgo_other": "منذ {{count}} دقيقة",
+    "now": "الآن"
+  }
 }

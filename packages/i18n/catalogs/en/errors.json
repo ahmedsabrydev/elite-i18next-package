@@ -1,8 +1,23 @@
 {
-  "generic": { "title": "Something went wrong", "body": "Please try again in a moment." },
-  "network": { "title": "Connection lost", "body": "Check your internet connection and retry." },
-  "notFound": { "title": "Page not found", "body": "The page you are looking for does not exist." },
-  "forbidden": { "title": "Access denied", "body": "You do not have permission to view this." },
-  "timeout": { "title": "Request timed out", "body": "The server took too long to respond." },
-  "code": "Error code: {{code}}"
+  "code": "Error code: {{code}}",
+  "forbidden": {
+    "body": "You do not have permission to view this.",
+    "title": "Access denied"
+  },
+  "generic": {
+    "body": "Please try again in a moment.",
+    "title": "Something went wrong"
+  },
+  "network": {
+    "body": "Check your internet connection and retry.",
+    "title": "Connection lost"
+  },
+  "notFound": {
+    "body": "The page you are looking for does not exist.",
+    "title": "Page not found"
+  },
+  "timeout": {
+    "body": "The server took too long to respond.",
+    "title": "Request timed out"
+  }
 }

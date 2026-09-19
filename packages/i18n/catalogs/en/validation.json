@@ -1,8 +1,14 @@
 {
-  "required": "{{field}} is required",
   "email": "Enter a valid email address",
-  "minLength": "{{field}} must be at least {{min}} characters",
   "maxLength": "{{field}} must be at most {{max}} characters",
-  "password": { "weak": "Password is too weak", "mismatch": "Passwords do not match" },
-  "number": { "min": "Must be at least {{min}}", "max": "Must be at most {{max}}" }
+  "minLength": "{{field}} must be at least {{min}} characters",
+  "number": {
+    "max": "Must be at most {{max}}",
+    "min": "Must be at least {{min}}"
+  },
+  "password": {
+    "mismatch": "Passwords do not match",
+    "weak": "Password is too weak"
+  },
+  "required": "{{field}} is required"
 }
