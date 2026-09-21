@@ -42,16 +42,25 @@ export function i18nVitePlugin(options: I18nVitePluginOptions) {
       manifest = scanCatalogs(options)
     },
 
-    generateBundle(): { fileName: string; source: string }[] {
+    generateBundle(this: unknown): { fileName: string; source: string }[] {
       if (Object.keys(manifest.locales).length === 0) {
         manifest = scanCatalogs(options)
       }
-      return [
+      const assets = [
         {
           fileName: 'i18n-manifest.json',
           source: JSON.stringify(manifest),
         },
       ]
+      const context = this as
+        | { emitFile?: (asset: { type: 'asset'; fileName: string; source: string }) => void }
+        | undefined
+      if (typeof context?.emitFile === 'function') {
+        for (const asset of assets) {
+          context.emitFile({ type: 'asset', fileName: asset.fileName, source: asset.source })
+        }
+      }
+      return assets
     },
   }
 }

@@ -29,4 +29,15 @@ describe('i18nVitePlugin', () => {
     expect(parsed.locales.en.common).toEqual({ hash: expect.any(String), bytes: expect.any(Number) })
     expect(parsed.locales.ar.common).toEqual({ hash: expect.any(String), bytes: expect.any(Number) })
   })
+
+  it('hands the manifest to the bundle context so it is written to disk', () => {
+    const emitted: { type: string; fileName: string; source: string }[] = []
+    const plugin = i18nVitePlugin({ catalogsDir: fixture(), locales: ['en', 'ar'] })
+    plugin.generateBundle.call({
+      emitFile: (asset: { type: string; fileName: string; source: string }) => emitted.push(asset),
+    })
+    const manifest = emitted.find((a) => a.fileName === 'i18n-manifest.json')
+    expect(manifest).toBeDefined()
+    expect(manifest?.type).toBe('asset')
+  })
 })
