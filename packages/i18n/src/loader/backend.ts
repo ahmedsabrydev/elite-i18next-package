@@ -27,14 +27,8 @@ export function namespaceChunkLoader<L extends string = DefaultLocale>(
       ? [`${shared}/${lng}/${ns}.json`, `${publicPath}/${lng}/${ns}.json`]
       : [`${publicPath}/${lng}/${ns}.json`]
     for (const specifier of candidates) {
-      try {
-        const mod = (await import(/* @vite-ignore */ specifier)) as {
-          default?: NamespaceResources
-        } & NamespaceResources
-        return (mod.default ?? mod) as NamespaceResources
-      } catch {
-        // Try the next candidate.
-      }
+      const loaded = await importJson(specifier)
+      if (loaded) return loaded
     }
     if (!config.publicPath) return undefined
     try {
@@ -44,6 +38,37 @@ export function namespaceChunkLoader<L extends string = DefaultLocale>(
     } catch {
       return undefined
     }
+  }
+}
+
+async function importJson(
+  specifier: string,
+): Promise<NamespaceResources | undefined> {
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    try {
+      const nodeModule = (await import('node:module')) as unknown as {
+        createRequire: (path: string | URL) => ((id: string) => unknown) & {
+          resolve: (id: string) => string
+        }
+      }
+      const require = nodeModule.createRequire(import.meta.url)
+      return require(
+        /* turbopackIgnore: true */ require.resolve(specifier),
+      ) as NamespaceResources
+    } catch {
+      // Not resolvable as a Node module; fall through to a dynamic import.
+    }
+  }
+  try {
+    const mod = (await import(
+      /* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */
+      specifier
+    )) as {
+      default?: NamespaceResources
+    } & NamespaceResources
+    return (mod.default ?? mod) as NamespaceResources
+  } catch {
+    return undefined
   }
 }
 
