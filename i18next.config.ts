@@ -5,6 +5,7 @@ export default defineConfig({
   extract: {
     input: ['packages/i18n/src/**/*.{ts,tsx}', 'apps/*/src/**/*.{ts,tsx}'],
     ignore: ['**/__tests__/**', '**/*.test.{ts,tsx}', '**/*.test-d.ts'],
+    useTranslationNames: ['useTranslation', 'useT'],
     output: 'packages/i18n/catalogs/{{language}}/{{namespace}}.json',
     defaultNS: 'common',
     keySeparator: '.',
