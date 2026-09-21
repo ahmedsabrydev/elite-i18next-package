@@ -46,7 +46,10 @@ async function importJson(
 ): Promise<NamespaceResources | undefined> {
   if (typeof process !== 'undefined' && process.versions?.node) {
     try {
-      const nodeModule = (await import('node:module')) as unknown as {
+      const nodeModule = (await import(
+        /* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */
+        'node:module'
+      )) as unknown as {
         createRequire: (path: string | URL) => ((id: string) => unknown) & {
           resolve: (id: string) => string
         }
