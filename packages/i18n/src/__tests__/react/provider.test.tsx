@@ -58,6 +58,26 @@ describe('I18nProvider', () => {
     expect(navigate).toHaveBeenCalledWith('/ar/settings')
   })
 
+  it('derives the locale prefix from config, not a hardcoded en|ar', () => {
+    const runtime = createI18n({
+      locales: ['en', 'ar', 'he'],
+      defaultLocale: 'en',
+      catalogs: { public: 'catalogs' },
+      backend: { load: async () => ({}) },
+    })
+    const navigate = vi.fn()
+    window.history.replaceState({}, '', '/he/settings?tab=1#top')
+    const { result } = renderHook(() => useLocale(), {
+      wrapper: ({ children }) => (
+        <I18nProvider runtime={runtime as never} locale="he" navigate={navigate}>
+          {children}
+        </I18nProvider>
+      ),
+    })
+    act(() => result.current.changeLocale('ar'))
+    expect(navigate).toHaveBeenCalledWith('/ar/settings?tab=1#top')
+  })
+
   it('throws outside the provider', () => {
     expect(() => renderHook(() => useLocale())).toThrow(/I18nProvider/)
   })

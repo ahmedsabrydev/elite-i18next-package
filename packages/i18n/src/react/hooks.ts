@@ -23,18 +23,24 @@ export function useT(ns?: Namespace): TFunction {
 export function useLocale(): LocaleSnapshot & {
   changeLocale: (lng: string) => void
 } {
-  const { snapshot, navigate } = useI18nContext()
+  const { snapshot, navigate, runtime } = useI18nContext()
 
   const changeLocale = useMemo(
     () => (lng: string) => {
       if (typeof window === 'undefined') return
-      const next = window.location.pathname.replace(/^\/(en|ar)(?=\/|$)/, `/${lng}`)
-      const href = next === window.location.pathname ? `/${lng}${window.location.pathname}` : next
+      const { pathname, search, hash } = window.location
+      const pattern = new RegExp(`^/(${runtime.config.locales.map(escapeRegExp).join('|')})(?=/|$)`)
+      const next = pathname.replace(pattern, `/${lng}`)
+      const href = `${next === pathname ? `/${lng}${pathname}` : next}${search}${hash}`
       if (navigate) navigate(href)
       else window.location.assign(href)
     },
-    [navigate],
+    [navigate, runtime],
   )
 
   return { ...snapshot, changeLocale }
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
