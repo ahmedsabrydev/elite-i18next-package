@@ -40,11 +40,9 @@ export function createI18n<L extends string = DefaultLocale>(
   void instance.init(initOptions)
 
   const loadNamespace = async (lng: L, ns: Namespace): Promise<void> => {
-    if (!backend.has(lng, ns)) {
-      const resources = await backend.load(lng, ns)
-      if (resources) instance.addResourceBundle(lng, ns, resources, true, true)
-    }
-    if (lng !== resolved.fallbackLng && !backend.has(resolved.fallbackLng, ns)) {
+    const resources = await backend.load(lng, ns)
+    if (resources) instance.addResourceBundle(lng, ns, resources, true, true)
+    if (lng !== resolved.fallbackLng) {
       const fallback = await backend.load(resolved.fallbackLng, ns)
       if (fallback) instance.addResourceBundle(resolved.fallbackLng, ns, fallback, true, true)
     }
