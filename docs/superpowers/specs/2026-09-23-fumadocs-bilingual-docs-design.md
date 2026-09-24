@@ -98,7 +98,6 @@ apps/docs/
   next.config.mjs
   postcss.config.mjs
   tsconfig.json
-  source.config.ts            # MDX collection + remarkAutoTypeTable generator
   proxy.ts                    # createI18nMiddleware (Next 16 proxy convention)
   README.md                   # how to run the docs app
   scripts/
@@ -225,32 +224,40 @@ cross-linked; they end with a "Related" block.
 
 ### 5.3 API reference (hybrid)
 
-- `source.config.ts` configures `remarkAutoTypeTable` with `createGenerator` and a filesystem cache
-  at `.next/fumadocs-typescript`:
+- The `AutoTypeTable` **React Server Component** (`fumadocs-typescript/ui`), not the remark plugin,
+  is registered in `components/mdx.tsx` with a generator built by `createGenerator(...)` and a
+  filesystem cache at `.next/fumadocs-typescript`. This needs no `source.config.ts` and keeps the
+  Macro API (`defineDocs` in `lib/source.ts`) as the single content source:
 
-  ```ts
-  import { remarkAutoTypeTable, createGenerator, createFileSystemGeneratorCache } from 'fumadocs-typescript';
-  import { defineConfig } from 'fumadocs-mdx/config';
+  ```tsx
+  import defaultComponents from 'fumadocs-ui/mdx';
+  import type { MDXComponents } from 'mdx/types';
+  import { createGenerator, createFileSystemGeneratorCache } from 'fumadocs-typescript';
+  import { AutoTypeTable, type AutoTypeTableProps } from 'fumadocs-typescript/ui';
 
   const generator = createGenerator({
     cache: createFileSystemGeneratorCache('.next/fumadocs-typescript'),
   });
 
-  export default defineConfig({
-    mdxOptions: { remarkPlugins: [[remarkAutoTypeTable, { generator }]] },
-  });
+  export function getMDXComponents(components?: MDXComponents) {
+    return {
+      ...defaultComponents,
+      AutoTypeTable: (props: Partial<AutoTypeTableProps>) => (
+        <AutoTypeTable {...props} generator={generator} />
+      ),
+      ...components,
+    } satisfies MDXComponents;
+  }
   ```
 
-- `components/mdx-components.tsx` registers `defaultComponents` plus the type-table components so
-  `<auto-type-table />` resolves.
 - Type tables are used for the high-churn exported types: `CreateI18nConfig`, `ResolvedConfig`,
   `I18nRuntime`, `I18nEvent`, `NamespaceLoader`, `LocaleSnapshot`, `I18nRedirect`, `I18nManifest`,
   `LocaleState`.
-- **Path convention:** `auto-type-table path` is relative to the MDX file. API-reference pages live
-  in a shallow, fixed location (`content/docs/{lang}/appendix/api-index.mdx` and the per-module
-  `types.mdx` pages) and reference source files via a documented relative path, e.g.
-  `../../../../../../packages/i18n/src/core/types.ts`. The convention and one worked example are
-  documented in `appendix/api-index.mdx` so future pages stay consistent.
+- **Path convention:** `path` is relative to the app's `cwd` (turbo runs scripts with cwd =
+  `apps/docs`), e.g. `../../packages/i18n/src/core/types.ts`. The convention and one worked example
+  are documented in `appendix/api-index.mdx` so future pages stay consistent.
+- Pages using `AutoTypeTable` must be statically generated (they are, via
+  `generateStaticParams`), since the component reads the filesystem at build time.
 - Fields hidden from public docs use tsdoc `@internal` in source (no doc-only forks of the types).
 
 ### 5.4 File-map appendix
@@ -300,7 +307,7 @@ cross-linked; they end with a "Related" block.
    the content tree; a route present in one locale but not the other fails the build.
 4. **RTL smoke** — a checker (script or part of parity) asserts the rendered `/ar` output contains
    `dir="rtl"` on `<html>` and that at least one code block carries `dir="ltr"`.
-5. **Typecheck** — `tsc --noEmit` clean, including `source.config.ts` and MDX component typings.
+5. **Typecheck** — `tsc --noEmit` clean, including `proxy.ts`, `components/mdx.tsx`, and MDX component typings.
 6. **Extract gate** — `pnpm i18n:types` / `extract --ci` remains clean after the ignore update.
 7. **Local preview** — served via the `deploy-website` skill against `next dev`/`next start`.
 
@@ -331,8 +338,8 @@ cross-linked; they end with a "Related" block.
 - Mirror the Next 16 conventions already proven in `apps/next-web` (proxy file, `[lang]` segment,
   `generateStaticParams`).
 - `parser: 'dir'` means slugs never include the locale; the `[lang]` segment carries it.
-- `source.config.ts` is evaluated at build/dev time by `fumadocs-mdx`; keep the generator cache
-  under `.next/` (gitignored).
+- The `AutoTypeTable` generator cache lives under `.next/` (gitignored); type tables are therefore
+  read at build time, so keep MDX pages statically generated.
 - Arabic UI labels are authored, not imported from a third-party pack, so there is no dependency on
   an unverified translation bundle.
 - Keep the docs app free of runtime dependencies on `@faang/i18n`; the only contact points are
