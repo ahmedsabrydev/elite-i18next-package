@@ -1,0 +1,62 @@
+---
+title: Core Types
+description: "The exported type surface of the kernel: directions, locales, namespaces, events, and the runtime contract."
+---
+
+## Purpose
+
+Every public shape in the package is declared in `packages/i18n/src/core/types.ts` and re-exported
+from the root entry point. Adapters import these types so runtime and consumer agree on one
+contract.
+
+## Exported Types
+
+| Type | Kind | Meaning |
+|---|---|---|
+| `Dir` | union | `'ltr' \| 'rtl'` |
+| `DefaultLocale` | union | `'en' \| 'ar'` (a default, not a limit) |
+| `Namespace` | union + open string | the five shared namespaces plus any custom string |
+| `I18nEvent` | discriminated union | telemetry events |
+| `CreateI18nConfig` | object | constructor input |
+| `ResolvedConfig` | object | constructor input with defaults applied |
+| `I18nRuntime` | object | the runtime contract |
+| `I18nBackend` | object | custom loader shape |
+| `NamespaceResources` | object | a namespace's parsed JSON |
+| `NamespaceLoader` | function | `(lng, ns) => Promise<NamespaceResources \| undefined>` |
+
+## I18nEvent
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nEvent" />
+
+## NamespaceLoader
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="NamespaceLoader" />
+
+## Usage
+
+```ts
+import type { Dir, I18nEvent, Namespace, NamespaceResources } from '@faang/i18n'
+```
+
+> Note: import `NamespaceResources` (plural). The `Namespace` type is intentionally open —
+> `(string & {})` keeps editor autocomplete for the five shared names while allowing app-owned
+> namespaces such as `'dashboard'`.
+
+## Behavior and Edge Cases
+
+- `Namespace` lists `common`, `errors`, `auth`, `validation`, and `datetime`, then intersects an open
+  string, so any string is assignable while autocomplete still suggests the known values.
+- `I18nEvent` is discriminated on `type`; a `switch` over it is exhaustive.
+- `CreateI18nConfig` is generic in `L`, so `locales` and `defaultLocale` stay in sync when you use
+  `as const`.
+
+## Failure Modes
+
+Types are erased at runtime. There is no runtime guard that a namespace string matches
+`NS_ID_PATTERN`; an unknown namespace simply loads nothing.
+
+## Related
+
+- [createI18n()](/packages/kernel/create-i18n)
+- [resolveConfig()](/packages/kernel/resolve-config)
+- [API Index](/appendix/api-index)

@@ -1,0 +1,87 @@
+---
+title: createI18n()
+description: نقطة الدخول الوحيدة التي تبني نسخة i18next وتُطبّق الافتراضات وتُرجع I18nRuntime.
+---
+
+## الغرض
+
+`createI18n` هو المُنشئ الوحيد في النواة. يُطبّق إعدادك، وينشئ نسخة i18next خاصة، ويوصل خلفية
+المُحمّل المُدرّجة، ثم يُرجع `I18nRuntime`. كل مُهايئ وكل تطبيق يبدأ من هنا.
+
+## متى تستخدمه
+
+استخدمه مرة واحدة لكل تطبيق (أو مرة لكل اختبار) للحصول على زمن تشغيل. لا تستدعِ `i18next.init`
+بنفسك؛ فزمن التشغيل هو السطح المدعوم. وإن احتجت الوصول المباشر إلى i18next فإن `runtime.instance`
+متاح.
+
+## الاستخدام
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs', shared: '/shared-catalogs' },
+  fallbackLng: 'en',
+  numberingSystem: 'latn',
+  onEvent: (event) => console.log(event.type),
+})
+```
+
+## واجهة البرمجة
+
+```ts
+function createI18n<L extends string = DefaultLocale>(
+  config: CreateI18nConfig<L>,
+): I18nRuntime<L>
+```
+
+### CreateI18nConfig
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="CreateI18nConfig" />
+
+### I18nRuntime
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nRuntime" />
+
+## المعاملات والمُرجَع
+
+| المعامل | النوع | مطلوب | الوصف |
+|---|---|---|---|
+| `config.locales` | `readonly L[]` | نعم | كل اللغات التي يدعمها التطبيق |
+| `config.defaultLocale` | `L` | نعم | اللغة المستخدمة عند غياب البادئة |
+| `config.catalogs.public` | `string` | نعم | مُحدِّد الأساس لكتالوجات التطبيق |
+| `config.catalogs.shared` | `string` | لا | مُحدِّد الأساس للكتالوجات المشتركة، يُفحص أولاً |
+| `config.defaultNS` | `Namespace` | لا | القيمة الافتراضية `'common'` |
+| `config.fallbackLng` | `L` | لا | القيمة الافتراضية `defaultLocale` |
+| `config.publicPath` | `string` | لا | يُفعّل طبقة نقل `fetch` |
+| `config.numberingSystem` | `'latn' \| 'arab'` | لا | القيمة الافتراضية `'latn'` |
+| `config.onEvent` | `(event: I18nEvent) => void` | لا | مستقبل القياسات |
+| `config.backend` | `I18nBackend` | لا | مُحمّل مخصص يستبدل النقل المدمج |
+
+يُرجع `I18nRuntime`.
+
+## السلوك والحالات الحدّية
+
+- تُطبّق الافتراضات مرة واحدة عند الإنشاء داخل `resolveConfig`.
+- تُنشأ نسخة i18next بخيار `initImmediate: false`، لذا يكون `t()` قابلاً للاستخدام فور إرجاع
+  `createI18n` حتى قبل تحميل أي مساحة أسماء (المفاتيح المفقودة تُرجع المفتاح نفسه).
+- القيمة الافتراضية لـ `fallbackLng` هي `defaultLocale`؛ وتعيينها صراحةً يسمح للغة ناقصة
+  بالاستعارة من لغة مكتملة.
+- `backend` يستبدل طبقة النقل فقط. وتبقى طبقات الذاكرة والتخزين الدائم والطلبات المتزامنة فعّالة،
+  وهذا ما يُحافظ على إزالة تكرار الجلب المسبق حتى مع مُحمّل مخصص.
+- لا يُجلب أي كتالوج أثناء الإنشاء.
+
+## أنماط الفشل
+
+- الإعداد المشوّه (مثل `locales` فارغة) مسؤولية المستدعي؛ لا تتحقق النواة من انتماء `defaultLocale`
+  إلى `locales` في الإصدار الأول.
+- إذا أشار `catalogs.public` إلى موضع غير موجود فسيظل الإنشاء ناجحاً؛ تُحسم عمليات التحميل إلى
+  `undefined` وتُعرض اللغة الاحتياطية.
+
+## ذو صلة
+
+- [resolveConfig()](/packages/kernel/resolve-config)
+- [الأنواع الأساسية](/packages/kernel/types)
+- [namespaceChunkLoader و TieredBackend](/packages/loader/backend)

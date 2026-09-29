@@ -1,0 +1,74 @@
+---
+title: resolveConfig()
+description: يُطبّق الافتراضات وينتج ResolvedConfig المجمّد المخزَّن على زمن التشغيل.
+---
+
+## الغرض
+
+يُحوّل `resolveConfig` كائن `CreateI18nConfig` القادم من المستدعي إلى `ResolvedConfig` حيث لكل حقل
+اختياري قيمة صريحة. وهو نقي ومتزامن وبلا آثار جانبية.
+
+## متى تستخدمه
+
+نادراً ما تستدعيه مباشرة — فـ `createI18n` يفعل ذلك. لكنه مُصدَّر كي تتمكن الاختبارات والمُهايئات
+المتقدمة من فحص الإعداد الفعّال دون إنشاء زمن تشغيل.
+
+## الاستخدام
+
+```ts
+import { resolveConfig } from '@faang/i18n'
+
+const resolved = resolveConfig({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+
+resolved.fallbackLng // 'en'
+resolved.defaultNS // 'common'
+resolved.numberingSystem // 'latn'
+```
+
+## واجهة البرمجة
+
+```ts
+function resolveConfig<L extends string = DefaultLocale>(
+  config: CreateI18nConfig<L>,
+): ResolvedConfig<L>
+```
+
+### ResolvedConfig
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="ResolvedConfig" />
+
+## المعاملات والمُرجَع
+
+| حقل الإدخال | الافتراضي المُطبَّق |
+|---|---|
+| `fallbackLng` | `config.defaultLocale` |
+| `defaultNS` | `DEFAULT_NS` (`'common'`) |
+| `numberingSystem` | `'latn'` |
+| `publicPath` | `undefined` (طبقة fetch معطّلة) |
+| `backend` | `undefined` (يُستخدم النقل المدمج) |
+
+الناتج كائن جديد. أما مصفوفة `locales` وكائن `catalogs` فتُمرَّران بالمرجع ولا تنسخهما الدالة.
+
+## السلوك والحالات الحدّية
+
+- يُطبَّق الافتراضي على `fallbackLng` فقط عندما تكون `undefined`؛ فقيمة `fallbackLng` صريحة تساوي
+  لغة غير افتراضية تبقى كما هي.
+- لا يحدث تحقق من انتماء `defaultLocale` أو `fallbackLng` إلى `locales` في الإصدار الأول. هذا تأجيل
+  مسجَّل؛ زوّد بقيم متسقة.
+- يعيد `packages/i18n/src/core/resolve-config.ts` أيضاً تصدير `LOADER` باسم `loaderDefaults`؛ وهو
+  ليس تحويلاً للإعداد بل جدول القيم الافتراضية للمُحمّل.
+
+## أنماط الفشل
+
+لا ترمي `resolveConfig` خطأً قط. وتمرير إعداد ينقصه حقول مطلوبة ينتج `ResolvedConfig` بقيم
+`undefined` في تلك المواضع، وسيفشل لاحقاً عند أول استدعاء لـ i18next.
+
+## ذو صلة
+
+- [createI18n()](/packages/kernel/create-i18n)
+- [الافتراضات والثوابت](/packages/kernel/defaults)
+- [الأنواع الأساسية](/packages/kernel/types)

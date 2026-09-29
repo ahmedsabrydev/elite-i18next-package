@@ -1,0 +1,88 @@
+---
+title: createI18n()
+description: The single entry point that builds an i18next instance, resolves defaults, and returns an I18nRuntime.
+---
+
+## Purpose
+
+`createI18n` is the kernel's only constructor. It resolves your configuration, creates a private
+i18next instance, wires the tiered loader backend, and returns an `I18nRuntime`. Every adapter and
+every application starts here.
+
+## When to Use It
+
+Use it once per application (or once per test) to obtain a runtime. Do not call
+`i18next.init` yourself; the runtime is the supported surface. If you must reach i18next directly,
+`runtime.instance` is available.
+
+## Usage
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs', shared: '/shared-catalogs' },
+  fallbackLng: 'en',
+  numberingSystem: 'latn',
+  onEvent: (event) => console.log(event.type),
+})
+```
+
+## API
+
+```ts
+function createI18n<L extends string = DefaultLocale>(
+  config: CreateI18nConfig<L>,
+): I18nRuntime<L>
+```
+
+### CreateI18nConfig
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="CreateI18nConfig" />
+
+### I18nRuntime
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nRuntime" />
+
+## Parameters and Returns
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `config.locales` | `readonly L[]` | yes | every locale the app supports |
+| `config.defaultLocale` | `L` | yes | the locale used when no prefix is present |
+| `config.catalogs.public` | `string` | yes | base specifier for the app's own catalogs |
+| `config.catalogs.shared` | `string` | no | base specifier for shared catalogs, checked first |
+| `config.defaultNS` | `Namespace` | no | defaults to `'common'` |
+| `config.fallbackLng` | `L` | no | defaults to `defaultLocale` |
+| `config.publicPath` | `string` | no | enables the `fetch` transport tier |
+| `config.numberingSystem` | `'latn' \| 'arab'` | no | defaults to `'latn'` |
+| `config.onEvent` | `(event: I18nEvent) => void` | no | telemetry sink |
+| `config.backend` | `I18nBackend` | no | custom loader; overrides the built-in transport |
+
+Returns an `I18nRuntime`.
+
+## Behavior and Edge Cases
+
+- Resolution of defaults happens once, at construction, in `resolveConfig`.
+- The i18next instance is created with `initImmediate: false`, so `t()` is usable immediately after
+  `createI18n` returns, even before any namespace is loaded (missing keys return the key).
+- `fallbackLng` defaults to `defaultLocale`; setting it explicitly lets a partially translated locale
+  borrow from a complete one.
+- `backend` replaces only the transport tier. The memory, persistent, and in-flight tiers are still
+  used, which is how prefetch deduplication keeps working with a custom loader.
+- No catalog is fetched during construction.
+
+## Failure Modes
+
+- A malformed config (for example an empty `locales`) is the caller's responsibility; the kernel does
+  not validate membership of `defaultLocale` in `locales` in v1.
+- If `catalogs.public` points at a location that does not exist, construction still succeeds; loads
+  resolve `undefined` and the fallback locale renders.
+
+## Related
+
+- [resolveConfig()](/packages/kernel/resolve-config)
+- [Core Types](/packages/kernel/types)
+- [namespaceChunkLoader and TieredBackend](/packages/loader/backend)

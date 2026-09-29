@@ -1,0 +1,72 @@
+---
+title: الافتراضات والثوابت
+description: كل ثابت تُصدّره النواة وقيمته الدقيقة وموضع استخدامه.
+---
+
+## الغرض
+
+`packages/i18n/src/core/defaults.ts` هو الموضع الوحيد الذي تعيش فيه القيم الثابتة. واستيراد الثوابت
+بدل إعادة كتابة القيم الحرفية يُبقي الميزانيات ومجموعات اللغات وأزمنة المُحمّل متسقة بين النواة
+والمُحمّل والمُهايئات.
+
+## الثوابت
+
+| الثابت | القيمة | يستخدمه |
+|---|---|---|
+| `SUPPORTED_LOCALES` | `['en', 'ar']` | قائمة السماح الافتراضية في `resolveLocale` |
+| `DEFAULT_LOCALE` | `'en'` | اللغة الاحتياطية الافتراضية |
+| `DEFAULT_NS` | `'common'` | الافتراضي لحقل `defaultNS` |
+| `RTL_LOCALES` | `Set(['ar', 'he', 'fa', 'ur'])` | بحث الاتجاه في `dirFor` |
+| `NS_ID_PATTERN` | `/^[a-z][a-zA-Z0-9]*$/` | نمط معرّف مساحة الأسماء (غير مستخدم حالياً في النواة) |
+| `BUDGETS` | كائن، انظر أدناه | اختبارات الميزانية والأدوات |
+| `LOADER` | كائن، انظر أدناه | القيم الافتراضية للمُحمّل والطلبات المتزامنة |
+
+### BUDGETS
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+### LOADER
+
+```ts
+export const LOADER = {
+  timeoutMs: 3000,
+  retryDelayMs: 300,
+  retries: 1,
+  maxPrefetch: 2,
+  lruMaxEntries: 50,
+} as const
+```
+
+## الاستخدام
+
+```ts
+import { BUDGETS, LOADER, RTL_LOCALES } from '@faang/i18n'
+
+LOADER.timeoutMs // 3000
+RTL_LOCALES.has('ar') // true
+```
+
+## السلوك والحالات الحدّية
+
+- الكائنات معرّفة بـ `as const`، فحقولها أنواع حرفية للقراءة فقط. وتفكيك قيمة يمنحك النوع الحرفي لا
+  `number`.
+- `RTL_LOCALES` من النوع `Set`، لذا تُقارن العضوية بالقيمة لا بالمرجع.
+- `NS_ID_PATTERN` يطابق معرّفاً يبدأ بحرف صغير وهو مُصدَّر للأدوات، لكن النواة لا تفرضه حالياً على
+  مساحات الأسماء الواردة.
+
+## أنماط الفشل
+
+لا شيء؛ فهذه ثوابت وقت الترجمة بلا تفرّع.
+
+## ذو صلة
+
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
+- [InflightLoader](/packages/loader/inflight)

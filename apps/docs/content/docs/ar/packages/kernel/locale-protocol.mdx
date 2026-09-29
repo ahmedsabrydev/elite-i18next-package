@@ -1,0 +1,86 @@
+---
+title: بروتوكول اللغة
+description: تحليل إدخال اللغة غير الموثوق، وتخطيط الاتجاه، والتأكد من العضوية.
+---
+
+## الغرض
+
+`packages/i18n/src/core/locale.ts` هو حدّ الثقة لنصوص اللغات. فكل قيمة تأتي من مسار أو كوكي أو
+ترويسة `Accept-Language` تمرّ عبر `resolveLocale` قبل استخدامها لبناء إعادة توجيه أو اختيار كتالوج
+أو ضبط `dir`.
+
+## الصادرات
+
+| التصدير | التوقيع | الغرض |
+|---|---|---|
+| `resolveLocale` | `(input, allowed?, fallback?) => string` | تحقق وتطبيع ومطابقة المدخل |
+| `dirFor` | `(lng) => Dir` | تخطيط اللغة إلى `'ltr'` أو `'rtl'` |
+| `assertSupportedLocale` | `<L>(lng, allowed) => lng is L` | حارس نوع للعضوية |
+
+## resolveLocale
+
+```ts
+resolveLocale('ar-EG') // 'ar'
+resolveLocale('../../etc/passwd') // 'en' (الاحتياطية)
+resolveLocale('fr') // 'en' (غير مسموحة)
+resolveLocale(null) // 'en'
+```
+
+الخوارزمية:
+
+1. ترفض المدخل الفارغ أو ما يفشل في `SAFE_LNG`
+   (`/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/`) وتُرجع `fallback`.
+2. تصغّر الحروف وتأخذ الأساس قبل أول `-`.
+3. تبحث عن لغة مسموحة يساوي شكلها المصغّر الأساس.
+4. تُرجع المطابقة أو `fallback` عند عدم العثور على شيء.
+
+## dirFor
+
+```ts
+dirFor('ar') // 'rtl'
+dirFor('ar-EG') // 'rtl'
+dirFor('en') // 'ltr'
+dirFor('he') // 'rtl' (ضمن RTL_LOCALES)
+```
+
+يُبحث الاتجاه في `RTL_LOCALES` الذي يضم `ar` و`he` و`fa` و`ur` — حتى عندما لا تكون تلك اللغات ضمن
+`SUPPORTED_LOCALES`. ولا يُفحص إلا الأساس.
+
+## assertSupportedLocale
+
+```ts
+if (assertSupportedLocale(input, runtime.config.locales)) {
+  // يُضيَّق نوع input إلى اتحاد L
+}
+```
+
+وهو حارس نوع فقط؛ لا يُطبّع الحالة ولا يحذف المنطقة.
+
+## المعاملات والمُرجَع
+
+| الدالة | المعامل | الافتراضي | ملاحظات |
+|---|---|---|---|
+| `resolveLocale` | `allowed` | `SUPPORTED_LOCALES` | مرّر `runtime.config.locales` لاحترام قائمة التطبيق |
+| `resolveLocale` | `fallback` | `'en'` | يُرجع عند أي رفض |
+| `dirFor` | `lng` | — | يقبل أي نص؛ الأساسات المجهولة تصبح `ltr` |
+
+## السلوك والحالات الحدّية
+
+- تُهمَل المنطقة، لذا يُحسم `'en-US'` و`'en'` إلى الكتالوج نفسه.
+- تُطبَّع الحالة، فـ `'AR'` يطابق `'ar'`.
+- تنجو العلامات الكتابية من النمط لكنها تُهمَل في مطابقة الأساس: `resolveLocale('zh-Hant')` يستخدم
+  الأساس `zh`.
+- `dirFor` يحوّل أي لغة RTL غير مدعومة في المجموعة إلى `rtl`. وهذا مقصود: الاتجاه صفة كتابية لا صفة
+  توفر كتالوج.
+
+## أنماط الفشل
+
+لا ترمي `resolveLocale` أبداً ولا تُرجع `undefined`؛ فالمدخل السيئ يعني الاحتياطية دائماً.
+ويعتمد `assertSupportedLocale` على `Array.prototype.includes`، أي مساواة صارمة على النص الخام —
+طبّع أولاً إن كانت الحالة قد تختلف.
+
+## ذو صلة
+
+- [الافتراضات والثوابت](/packages/kernel/defaults)
+- [وسيطة إعادة التوجيه](/packages/next/middleware)
+- [إضافة Vite](/packages/vite/plugin)

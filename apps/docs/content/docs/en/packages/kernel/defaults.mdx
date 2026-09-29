@@ -1,0 +1,72 @@
+---
+title: Defaults and Constants
+description: Every constant the kernel exposes, its exact value, and where it is used.
+---
+
+## Purpose
+
+`packages/i18n/src/core/defaults.ts` is the single place where fixed values live. Importing the
+constants instead of retyping literals keeps budgets, locale sets, and loader timings consistent
+across the kernel, the loader, and the adapters.
+
+## Constants
+
+| Constant | Value | Used by |
+|---|---|---|
+| `SUPPORTED_LOCALES` | `['en', 'ar']` | default allowed list in `resolveLocale` |
+| `DEFAULT_LOCALE` | `'en'` | fallback default |
+| `DEFAULT_NS` | `'common'` | default for `defaultNS` |
+| `RTL_LOCALES` | `Set(['ar', 'he', 'fa', 'ur'])` | `dirFor` direction lookup |
+| `NS_ID_PATTERN` | `/^[a-z][a-zA-Z0-9]*$/` | exported namespace id pattern (currently unused by the kernel) |
+| `BUDGETS` | object, see below | budget tests and tooling |
+| `LOADER` | object, see below | loader and in-flight defaults |
+
+### BUDGETS
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+### LOADER
+
+```ts
+export const LOADER = {
+  timeoutMs: 3000,
+  retryDelayMs: 300,
+  retries: 1,
+  maxPrefetch: 2,
+  lruMaxEntries: 50,
+} as const
+```
+
+## Usage
+
+```ts
+import { BUDGETS, LOADER, RTL_LOCALES } from '@faang/i18n'
+
+LOADER.timeoutMs // 3000
+RTL_LOCALES.has('ar') // true
+```
+
+## Behavior and Edge Cases
+
+- The objects are `as const`, so their fields are readonly literal types. Destructuring a value gives
+  you the literal type, not `number`.
+- `RTL_LOCALES` is a `Set`, so it has value equality on membership, not by reference comparison.
+- `NS_ID_PATTERN` matches a lowercase-initial identifier and is exported for tooling, though the
+  kernel does not currently enforce it on incoming namespaces.
+
+## Failure Modes
+
+None; these are compile-time constants with no branching.
+
+## Related
+
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [Locale Protocol](/packages/kernel/locale-protocol)
+- [InflightLoader](/packages/loader/inflight)

@@ -1,0 +1,86 @@
+---
+title: Locale Protocol
+description: Parsing untrusted locale input, mapping direction, and asserting membership.
+---
+
+## Purpose
+
+`packages/i18n/src/core/locale.ts` is the trust boundary for locale strings. Every value that comes
+from a URL, cookie, or `Accept-Language` header passes through `resolveLocale` before it is used to
+build a redirect, choose a catalog, or set `dir`.
+
+## Exports
+
+| Export | Signature | Purpose |
+|---|---|---|
+| `resolveLocale` | `(input, allowed?, fallback?) => string` | validate, normalize, and match an input |
+| `dirFor` | `(lng) => Dir` | map a locale to `'ltr'` or `'rtl'` |
+| `assertSupportedLocale` | `<L>(lng, allowed) => lng is L` | type guard for membership |
+
+## resolveLocale
+
+```ts
+resolveLocale('ar-EG') // 'ar'
+resolveLocale('../../etc/passwd') // 'en' (fallback)
+resolveLocale('fr') // 'en' (not in allowed)
+resolveLocale(null) // 'en'
+```
+
+The algorithm:
+
+1. Reject falsy input or anything failing `SAFE_LNG` (`/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/`) and
+   return `fallback`.
+2. Lowercase and take the base subtag before the first `-`.
+3. Find an allowed locale whose lowercase form equals the base.
+4. Return the match, or `fallback` when none is found.
+
+## dirFor
+
+```ts
+dirFor('ar') // 'rtl'
+dirFor('ar-EG') // 'rtl'
+dirFor('en') // 'ltr'
+dirFor('he') // 'rtl' (in RTL_LOCALES)
+```
+
+Direction is looked up in `RTL_LOCALES`, which includes `ar`, `he`, `fa`, and `ur` — even when those
+locales are not in `SUPPORTED_LOCALES`. Only the base subtag is consulted.
+
+## assertSupportedLocale
+
+```ts
+if (assertSupportedLocale(input, runtime.config.locales)) {
+  // input is narrowed to the L union
+}
+```
+
+It is a type guard only; it does not normalize case or strip region.
+
+## Parameters and Returns
+
+| Function | Parameter | Default | Notes |
+|---|---|---|---|
+| `resolveLocale` | `allowed` | `SUPPORTED_LOCALES` | pass `runtime.config.locales` to honor the app's list |
+| `resolveLocale` | `fallback` | `'en'` | returned on any rejection |
+| `dirFor` | `lng` | — | accepts any string; unknown bases are `ltr` |
+
+## Behavior and Edge Cases
+
+- The region is discarded, so `'en-US'` and `'en'` resolve to the same catalog.
+- Case is normalized, so `'AR'` matches `'ar'`.
+- Script subtags survive the pattern but are ignored by base matching: `resolveLocale('zh-Hant')` uses
+  the base `zh`.
+- `dirFor` maps any unsupported RTL locale in the set to `rtl`. This is intentional: direction is a
+  property of the script, not of catalog availability.
+
+## Failure Modes
+
+`resolveLocale` never throws and never returns `undefined`; a bad input is always a fallback.
+`assertSupportedLocale` relies on `Array.prototype.includes`, so it is strict equality on the raw
+string — normalize first if case may vary.
+
+## Related
+
+- [Defaults and Constants](/packages/kernel/defaults)
+- [Redirect Middleware](/packages/next/middleware)
+- [Vite Manifest Plugin](/packages/vite/plugin)

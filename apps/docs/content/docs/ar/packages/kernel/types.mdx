@@ -1,0 +1,60 @@
+---
+title: الأنواع الأساسية
+description: "سطح الأنواع المُصدَّر من النواة: الاتجاهات واللغات ومساحات الأسماء والأحداث وعقد زمن التشغيل."
+---
+
+## الغرض
+
+كل شكل عام في الحزمة مُعرَّف في `packages/i18n/src/core/types.ts` ومُصدَّر من نقطة الدخول الجذرية.
+تستورد المُهايئات هذه الأنواع كي يتفق زمن التشغيل والمستهلك على عقد واحد.
+
+## الأنواع المُصدَّرة
+
+| النوع | النوع | المعنى |
+|---|---|---|
+| `Dir` | اتحاد | `'ltr' \| 'rtl'` |
+| `DefaultLocale` | اتحاد | `'en' \| 'ar'` (افتراضي لا حدّ) |
+| `Namespace` | اتحاد + نص مفتوح | مساحات الأسماء الخمس المشتركة وأي نص مخصص |
+| `I18nEvent` | اتحاد مميّز | أحداث القياسات |
+| `CreateI18nConfig` | كائن | مُدخل المُنشئ |
+| `ResolvedConfig` | كائن | مُدخل المُنشئ مع الافتراضات |
+| `I18nRuntime` | كائن | عقد زمن التشغيل |
+| `I18nBackend` | كائن | شكل المُحمّل المخصص |
+| `NamespaceResources` | كائن | JSON المُحلَّل لمساحة أسماء |
+| `NamespaceLoader` | دالة | `(lng, ns) => Promise<NamespaceResources \| undefined>` |
+
+## I18nEvent
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nEvent" />
+
+## NamespaceLoader
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="NamespaceLoader" />
+
+## الاستخدام
+
+```ts
+import type { Dir, I18nEvent, Namespace, NamespaceResources } from '@faang/i18n'
+```
+
+> ملاحظة: استورد `NamespaceResources` (بالجمع). ونوع `Namespace` مفتوح عمداً —
+> `(string & {})` يُبقي الإكمال التلقائي لأسماء مساحات الأسماء الخمس المشتركة مع السماح بمساحات
+> يملكها التطبيق مثل `'dashboard'`.
+
+## السلوك والحالات الحدّية
+
+- `Namespace` يسرد `common` و`errors` و`auth` و`validation` و`datetime`، ثم يدمج نصاً مفتوحاً، فيصبح
+  أي نص قابلاً للإسناد مع بقاء الإكمال التلقائي يقترح القيم المعروفة.
+- `I18nEvent` مميّز على الحقل `type`؛ و`switch` عليه يكون شاملاً.
+- `CreateI18nConfig` عام في `L`، لذا تبقى `locales` و`defaultLocale` متسقتين عند استخدام `as const`.
+
+## أنماط الفشل
+
+تُمحى الأنواع وقت التشغيل. ولا يوجد حارس وقت تشغيل يطابق نص مساحة الأسماء مع `NS_ID_PATTERN`؛
+فمساحة أسماء مجهولة ببساطة لا تُحمّل شيئاً.
+
+## ذو صلة
+
+- [createI18n()](/packages/kernel/create-i18n)
+- [resolveConfig()](/packages/kernel/resolve-config)
+- [فهرس واجهة البرمجة](/appendix/api-index)

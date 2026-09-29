@@ -1,0 +1,75 @@
+---
+title: resolveConfig()
+description: Applies defaults and produces the frozen ResolvedConfig stored on the runtime.
+---
+
+## Purpose
+
+`resolveConfig` turns a caller-supplied `CreateI18nConfig` into a `ResolvedConfig` where every
+optional field has a concrete value. It is pure, synchronous, and has no side effects.
+
+## When to Use It
+
+You rarely call it directly — `createI18n` does. It is exported so tests and advanced adapters can
+inspect the effective configuration without constructing a runtime.
+
+## Usage
+
+```ts
+import { resolveConfig } from '@faang/i18n'
+
+const resolved = resolveConfig({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+
+resolved.fallbackLng // 'en'
+resolved.defaultNS // 'common'
+resolved.numberingSystem // 'latn'
+```
+
+## API
+
+```ts
+function resolveConfig<L extends string = DefaultLocale>(
+  config: CreateI18nConfig<L>,
+): ResolvedConfig<L>
+```
+
+### ResolvedConfig
+
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="ResolvedConfig" />
+
+## Parameters and Returns
+
+| Input field | Default applied |
+|---|---|
+| `fallbackLng` | `config.defaultLocale` |
+| `defaultNS` | `DEFAULT_NS` (`'common'`) |
+| `numberingSystem` | `'latn'` |
+| `publicPath` | `undefined` (fetch tier disabled) |
+| `backend` | `undefined` (built-in transport used) |
+
+The output is a new object. The `locales` array and `catalogs` object are passed by reference; the
+function does not clone them.
+
+## Behavior and Edge Cases
+
+- `fallbackLng` is only defaulted when it is `undefined`; an explicit `fallbackLng` equal to a
+  non-default locale is preserved.
+- No validation is performed on `defaultLocale` or `fallbackLng` membership in `locales` in v1. This
+  is a recorded deferral; supply consistent values.
+- `packages/i18n/src/core/resolve-config.ts` also re-exports `LOADER` as `loaderDefaults`; it is not
+  a transformation of the config, just the loader default table.
+
+## Failure Modes
+
+`resolveConfig` does not throw. Passing a config missing required fields produces a
+`ResolvedConfig` with `undefined` in those positions and will fail later, at the first i18next call.
+
+## Related
+
+- [createI18n()](/packages/kernel/create-i18n)
+- [Defaults and Constants](/packages/kernel/defaults)
+- [Core Types](/packages/kernel/types)
