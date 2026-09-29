@@ -1,0 +1,74 @@
+---
+title: The i18next Model
+description: The exact i18next initialization the kernel uses, and what it means for keys and fallbacks.
+---
+
+## One Instance, No Globals
+
+`createI18n` calls `i18next.createInstance()`, so the package never touches the shared global
+i18next instance. Two runtimes in the same process are fully independent, which matters for tests
+and for multi-tenant servers.
+
+## Initialization Options
+
+The kernel passes this fixed set of options when it initializes the instance
+(`packages/i18n/src/core/create-i18n.ts`):
+
+| Option | Value | Why |
+|---|---|---|
+| `lng` | `config.defaultLocale` | the instance starts on the default locale |
+| `fallbackLng` | resolved `fallbackLng` | defaults to `defaultLocale` |
+| `supportedLngs` | `[...config.locales]` | rejects anything else |
+| `nonExplicitSupportedLngs` | `true` | `en-US` resolves to `en` |
+| `defaultNS` | resolved `defaultNS` | defaults to `'common'` |
+| `ns` | `[defaultNS]` | only the shell namespace is pre-declared |
+| `keySeparator` | `'.'` | nested JSON keys |
+| `nsSeparator` | `':'` | `t('errors:notFound')` |
+| `pluralSeparator` | `'_'` | `key_one`, `key_other` |
+| `contextSeparator` | `'_'` | `key_male`, `key_female` |
+| `compatibilityJSON` | `'v4'` | JSON v4 plural rules |
+| `returnEmptyString` | `false` | empty strings fall back instead of rendering blank |
+| `returnNull` | `false` | missing keys return the key, not `null` |
+| `interpolation.escapeValue` | `true` | interpolated values are escaped |
+| `resources` | `{}` | resources are loaded by the kernel, not at init |
+| `initImmediate` | `false` | init completes synchronously so the first render is stable |
+
+## Keys
+
+Catalogs are nested JSON, and code uses `t(key, { defaultValue })`:
+
+```json
+{
+  "app": {
+    "name": "Acme",
+    "greeting": "Hello, {{name}}"
+  }
+}
+```
+
+```ts
+t('app.name') // "Acme"
+t('app.greeting', { name: 'Sam' }) // "Hello, Sam"
+t('app.missing', { defaultValue: 'Fallback' }) // "Fallback"
+```
+
+Because the runtime keeps `keySeparator` as `'.'` and `nsSeparator` as `':'`, a key can address a
+namespace explicitly: `t('errors:notFound')`.
+
+## Locale Fallbacks
+
+When you load a namespace for a non-default locale, the kernel also loads the same namespace for
+`fallbackLng` and registers it. If a key is missing in `ar`, i18next resolves it from `en`. This is
+what keeps Arabic incomplete-but-shippable rather than showing raw keys.
+
+## Why Not Natural-Language Keys
+
+Natural-language keys (the English sentence as the key) were rejected: they break type checking,
+make refactors risky, and fight translation management systems. Structured keys plus
+`defaultValue` keep the source readable without giving up tooling.
+
+## Related
+
+- [createI18n()](/packages/kernel/create-i18n)
+- [Core Types](/packages/kernel/types)
+- [Missing translation behavior](/architecture/security-and-failure)

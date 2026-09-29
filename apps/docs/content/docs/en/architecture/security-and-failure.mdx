@@ -1,0 +1,61 @@
+---
+title: Security and Failure Modes
+description: How hostile input is contained, what happens when a load fails, and what the package deliberately does not do.
+---
+
+## Locale Input Is Untrusted
+
+Every locale that arrives from a URL, a cookie, or a header passes through `resolveLocale` in
+`packages/i18n/src/core/locale.ts`. It:
+
+1. rejects anything that is not a BCP-47-shaped tag via the `SAFE_LNG` pattern
+   (`/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/`);
+2. drops the region and lowercases the base;
+3. matches against the allowed locale list;
+4. falls back to the default on any mismatch.
+
+Because the value is validated before it is interpolated into a redirect target, a request such as
+`Accept-Language: ../../etc/passwd` cannot become a path traversal. The same helper is used by the
+Next middleware, the Vite route matchers, and the kernel's `getHtmlAttributes`.
+
+## Redirect Safety
+
+`i18nMiddleware` (`packages/i18n/src/next/middleware.ts`) builds its redirect as
+`/${locale}${request.pathname}${request.search}`. The `locale` is always a member of the configured
+`locales` array, so the prefix cannot be attacker-controlled; only the original path, which the
+framework already owns, is appended.
+
+## Failure Modes
+
+| Failure | Behavior |
+|---|---|
+| Catalog 404 or network error | the loader resolves `undefined`; the fallback locale renders |
+| Malformed JSON | `undefined`; the fallback locale renders |
+| Load exceeds `LOADER.timeoutMs` (3000ms) | `ns.timeout` is emitted, then `undefined` |
+| `onEvent` throws | swallowed by `emit`; rendering continues |
+| IndexedDB unavailable (SSR, private mode) | `PersistentStore` resolves `undefined` and is a no-op |
+| `indexedDB.open` blocked | resolves `undefined`; the tier is skipped |
+| Missing key with no fallback | i18next returns the key itself (`returnNull: false`) |
+
+None of these throw into application code. `loadNamespace` always resolves; it never rejects on a
+catalog failure.
+
+## Interpolation Escaping
+
+`interpolation.escapeValue` is `true`, so values interpolated into a string are HTML-escaped before
+they reach the DOM. This protects the common `t('greeting', { name: userInput })` pattern in React.
+If you intentionally need raw HTML, use i18next's `<Trans>` component rather than string
+interpolation.
+
+## Deliberate Non-Goals
+
+- No generic failure event. Failures are silent by design; only timeouts are observable.
+- No automatic retry storm. `InflightLoader` retries once after a short delay, then gives up.
+- No cookie-based first paint. See [Zero-Flicker SSR](/architecture/zero-flicker).
+- No secrets or credentials anywhere in the runtime; the package reads only public catalog files.
+
+## Related
+
+- [Zero-Flicker SSR](/architecture/zero-flicker)
+- [Observability](/architecture/observability)
+- [InflightLoader](/packages/loader/inflight)

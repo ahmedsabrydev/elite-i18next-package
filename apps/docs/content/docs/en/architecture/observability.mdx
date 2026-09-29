@@ -1,0 +1,79 @@
+---
+title: Observability
+description: Every event the kernel can emit, when it fires, and why emitting can never break rendering.
+---
+
+## The Event Union
+
+All telemetry is a single discriminated union, `I18nEvent`, defined in
+`packages/i18n/src/core/types.ts`:
+
+| Event | Fields | When it fires |
+|---|---|---|
+| `ns.load` | `lng`, `ns`, `ms`, `bytes?` | a namespace finished loading from a non-memory tier |
+| `ns.cache_hit` | `lng`, `ns` | a namespace was served from the memory tier |
+| `ns.timeout` | `lng`, `ns`, `ms` | the loader hit its timeout for that namespace |
+| `missing_key` | `lng`, `ns?`, `key` | a key was requested that does not exist |
+| `locale.switch` | `from`, `to` | the locale changed |
+
+The kernel itself emits `ns.load`, `ns.cache_hit`, and `ns.timeout`. The `missing_key` and
+`locale.switch` variants are part of the public union for adapters and applications to emit through
+the exported `emit` helper; wiring them into the kernel is tracked as follow-up work.
+
+`ns.load` carries `ms` (wall-clock milliseconds) and `bytes` (the length of `JSON.stringify` of the
+loaded resources). `bytes` is the UTF-16 code-unit length, not the byte length on the wire, so it is
+a lower bound for non-ASCII catalogs such as Arabic.
+
+## How Events Are Emitted
+
+You opt in by passing `onEvent` to `createI18n`. The kernel never logs anything itself.
+
+```ts
+const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+  onEvent: (event) => {
+    if (event.type === 'ns.load') metrics.timing('i18n.load', event.ms, { ns: event.ns })
+  },
+})
+```
+
+## Emission Is Total
+
+`emit` in `packages/i18n/src/obs/events.ts` wraps the callback in a `try/catch` and swallows any
+error:
+
+```ts
+export function emit(onEvent, event) {
+  if (!onEvent) return
+  try {
+    onEvent(event)
+  } catch {
+    // Observability must never break rendering or loading.
+  }
+}
+```
+
+This is deliberate: a broken metrics client must not be able to take down translation. The trade-off
+is that a throwing `onEvent` fails silently — if you need to know your callback is broken, catch and
+report inside your own callback.
+
+## What Is Not Emitted
+
+There is no generic "load failed" event. The spec defines no such event, and a non-timeout failure
+(404, network error, malformed JSON) simply resolves to `undefined` and renders the fallback locale.
+Only timeouts are observable, via `ns.timeout`. This is a deliberate deferral recorded in the design
+spec, not an oversight.
+
+## Cache Hits versus Loads
+
+`ns.cache_hit` is emitted only by the memory tier, because that is the only tier checked before the
+in-flight/loader path. A hit in the persistent (IndexedDB) tier is not a separate event; it surfaces
+as an `ns.load`, because the value still has to be placed into memory.
+
+## Related
+
+- [Security and Failure Modes](/architecture/security-and-failure)
+- [namespaceChunkLoader and TieredBackend](/packages/loader/backend)
+- [Core Types](/packages/kernel/types)

@@ -1,0 +1,74 @@
+---
+title: نموذج i18next
+description: تهيئة i18next الدقيقة التي تستخدمها النواة، وماذا تعني للمفاتيح واللغة الاحتياطية.
+---
+
+## نسخة واحدة بلا حالات عامة
+
+تستدعي `createI18n` الدالة `i18next.createInstance()`، فلا تلمس الحزمة نسخة i18next العامة
+المشتركة. وبهذا يستقل أي كائنَي تشغيل في العملية نفسها استقلالاً تاماً، وهو ما يهم في الاختبارات
+وفي خوادم متعددة المستأجرين.
+
+## خيارات التهيئة
+
+تمرّر النواة هذه المجموعة الثابتة عند تهيئة النسخة
+(`packages/i18n/src/core/create-i18n.ts`):
+
+| الخيار | القيمة | السبب |
+|---|---|---|
+| `lng` | `config.defaultLocale` | تبدأ النسخة على اللغة الافتراضية |
+| `fallbackLng` | `fallbackLng` المحسومة | الافتراضي هو `defaultLocale` |
+| `supportedLngs` | `[...config.locales]` | رفض أي لغة أخرى |
+| `nonExplicitSupportedLngs` | `true` | تُحسم `en-US` إلى `en` |
+| `defaultNS` | `defaultNS` المحسومة | الافتراضي `'common'` |
+| `ns` | `[defaultNS]` | تُعلَن مساحة القشرة فقط مسبقاً |
+| `keySeparator` | `'.'` | مفاتيح JSON المتشعّبة |
+| `nsSeparator` | `':'` | `t('errors:notFound')` |
+| `pluralSeparator` | `'_'` | `key_one` و`key_other` |
+| `contextSeparator` | `'_'` | `key_male` و`key_female` |
+| `compatibilityJSON` | `'v4'` | قواعد الجمع في JSON v4 |
+| `returnEmptyString` | `false` | النص الفارغ يرجع للاحتياطي بدل عرض فراغ |
+| `returnNull` | `false` | المفتاح المفقود يُرجع المفتاح لا `null` |
+| `interpolation.escapeValue` | `true` | تهريب القيم المُدخلة |
+| `resources` | `{}` | تُحمَّل الموارد عبر النواة لا عند التهيئة |
+| `initImmediate` | `false` | تكتمل التهيئة تزامنياً فيستقر العرض الأول |
+
+## المفاتيح
+
+الكتالوجات JSON متشعّب، وتستخدم الشيفرة `t(key, { defaultValue })`:
+
+```json
+{
+  "app": {
+    "name": "Acme",
+    "greeting": "Hello, {{name}}"
+  }
+}
+```
+
+```ts
+t('app.name') // "Acme"
+t('app.greeting', { name: 'Sam' }) // "Hello, Sam"
+t('app.missing', { defaultValue: 'Fallback' }) // "Fallback"
+```
+
+ولأن كائن التشغيل يبقي `keySeparator` على `'.'` و`nsSeparator` على `':'`، يمكن للمفتاح أن يخاطب
+مساحة أسماء صراحةً: `t('errors:notFound')`.
+
+## الاحتياطي بين اللغات
+
+عند تحميل مساحة أسماء للغة غير الافتراضية، تحمّل النواة المساحة نفسها للغة `fallbackLng`
+وتسجّلها أيضاً. فإذا غاب مفتاح في `ar` حسمه i18next من `en`. وهذا ما يجعل العربية قابلة
+للشحن وهي ناقصة بدل عرض مفاتيح خام.
+
+## لماذا لا مفاتيح بلغة طبيعية
+
+رُفضت المفاتيح باللغة الطبيعية (نص الجملة الإنجليزية مفتاحاً): فهي تكسر فحص الأنواع وتجعل إعادة
+الهيكلة مخاطرة وتتعارض مع أنظمة إدارة الترجمة. أما المفاتيح البنيوية مع `defaultValue` فتحفظ
+الشيفرة مقروءة دون التخلي عن الأدوات.
+
+## ذو صلة
+
+- [الدالة createI18n()](/packages/kernel/create-i18n)
+- [الأنواع الأساسية](/packages/kernel/types)
+- [سلوك الترجمة المفقودة](/architecture/security-and-failure)

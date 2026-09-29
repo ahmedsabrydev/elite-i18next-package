@@ -1,0 +1,81 @@
+---
+title: Catalog Protocol
+description: One JSON file per namespace, per locale, and how hashes and budgets keep it cacheable.
+---
+
+## The Unit
+
+The atomic unit of the catalog protocol is one JSON file:
+
+```
+catalogs/en/common.json
+catalogs/ar/common.json
+```
+
+One file is one namespace, one locale, one network request, and one cache entry. Nothing is bundled
+"just in case". A route loads exactly the namespaces it needs.
+
+## Shared and Shell Namespaces
+
+The package owns five shared namespaces, declared in `packages/i18n/src/catalogs/index.ts`:
+
+```ts
+export const SHARED_NAMESPACES = ['common', 'errors', 'auth', 'validation', 'datetime'] as const
+export const SHELL_NAMESPACES = ['common', 'errors'] as const
+```
+
+- **Shell namespaces** (`common`, `errors`) are small, needed on almost every page, and are
+  candidates for the first render.
+- **Lazy namespaces** (`auth`, `validation`, `datetime`, and any app-owned namespace) are loaded by
+  the routes that use them, usually with `prefetch` on hover or idle.
+
+## Directory Layout
+
+By default the loader reads `${catalogs.shared}/${lng}/${ns}.json` and
+`${catalogs.public}/${lng}/${ns}.json`, and optionally fetches
+`${publicPath}/${lng}/${ns}.json` when `publicPath` is set. The resolution order and the transport
+details live in `packages/i18n/src/loader/backend.ts`.
+
+## Identity and Hashes
+
+A catalog can be identified by content hash so caches can be invalidated precisely. The Vite plugin
+(`packages/i18n/src/vite/plugin.ts`) produces a manifest:
+
+```json
+{
+  "version": 1,
+  "locales": {
+    "en": { "common": { "hash": "3f2a9c1d0b7e", "bytes": 812 } }
+  }
+}
+```
+
+The hash is the first 12 hex characters of the SHA-256 of the file, and `bytes` is the raw byte
+length. The persistent store accepts a `hash` argument so a stale record can be rejected (see
+[PersistentStore](/packages/loader/persistent)).
+
+## Budgets
+
+Every catalog unit has a gzip budget, enforced by `packages/i18n/scripts/check-budget.mjs` and
+mirrored as `BUDGETS` in `packages/i18n/src/core/defaults.ts`:
+
+| Unit | Budget |
+|---|---|
+| Kernel bundle (`dist/index.js`) | 12 KiB gzip |
+| Shell catalogs (`common` + `errors`, combined) | 12 KiB gzip |
+| One lazy namespace | 16 KiB gzip |
+| Manifest | 1.5 KiB gzip |
+
+`pnpm budget` fails the build if any catalog or the kernel exceeds its budget.
+
+## Why Not a Single File
+
+A single `translations.json` per locale forces every visitor to download every string for every
+feature. The catalog protocol trades a little bookkeeping for route-level payloads, which is what
+makes 2G-safe delivery possible.
+
+## Related
+
+- [Loader Overview](/packages/loader/backend)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [PersistentStore](/packages/loader/persistent)
