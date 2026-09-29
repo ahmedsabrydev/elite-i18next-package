@@ -1,0 +1,74 @@
+---
+title: Quick Start
+description: Create a runtime, load a namespace, and translate on the server and in React.
+---
+
+## 1. Create a Runtime
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+  onEvent: (event) => console.log(event.type, event),
+})
+```
+
+`createI18n` resolves defaults (`fallbackLng` becomes `defaultLocale`, `defaultNS` becomes
+`'common'`, `numberingSystem` becomes `'latn'`) and returns an `I18nRuntime`. No catalog is
+fetched at this point.
+
+## 2. Load a Namespace
+
+```ts
+await runtime.loadNamespace('en', 'common')
+const t = runtime.getT('en', 'common')
+t('app.name') // "Acme"
+```
+
+`loadNamespace` checks the in-memory cache, then the persistent cache, then the catalog
+transport. It also lives under a single in-flight promise per `lng:ns`, so concurrent callers
+share one load. When the requested locale is not the fallback locale, the fallback bundle for
+the same namespace is hydrated too.
+
+## 3. Render in React
+
+```tsx
+import { I18nProvider, useT } from '@faang/i18n/react'
+
+function App() {
+  return (
+    <I18nProvider runtime={runtime} locale="en">
+      <Greeting />
+    </I18nProvider>
+  )
+}
+
+function Greeting() {
+  const t = useT('common')
+  return <h1>{t('app.name')}</h1>
+}
+```
+
+The provider mirrors `{ lng, dir, isRtl, status }` into context and hands the i18next instance
+to `react-i18next`, so `useT` and `Trans` work as usual.
+
+## 4. Read the HTML Attributes
+
+```tsx
+import { getHtmlAttributes } from '@faang/i18n/next'
+
+const { lang, dir } = getHtmlAttributes('ar')
+return <html lang={lang} dir={dir}>{children}</html>
+```
+
+`getHtmlAttributes` resolves the locale safely and maps it to a direction, so the first byte of
+HTML already has the correct `lang` and `dir`.
+
+## Related
+
+- [Installation](/getting-started/installation)
+- [Core Concepts](/getting-started/core-concepts)
+- [Hooks](/packages/react/hooks)

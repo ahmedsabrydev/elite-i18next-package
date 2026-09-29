@@ -1,0 +1,73 @@
+---
+title: Installation
+description: Install @faang/i18n, add the peers for your runtime, and know exactly which subpath to import.
+---
+
+## Requirements
+
+- Node.js 22 or later.
+- pnpm 10, matching the monorepo's `packageManager` field.
+- `i18next` 26.x. It is the only required peer dependency; every other peer is optional and is
+  needed only by the runtime you adopt.
+
+## Install the Package
+
+```bash
+# Install the package and its required engine
+pnpm add @faang/i18n i18next
+```
+
+## Add the Peers for Your Runtime
+
+| Runtime | Packages to add | Subpath |
+|---|---|---|
+| React | `react`, `react-dom`, `react-i18next` | `@faang/i18n/react` |
+| Next.js App Router | the React peers | `@faang/i18n/next` |
+| Vite (build-time) | `vite` | `@faang/i18n/vite` |
+| Zustand locale store | `zustand` | `@faang/i18n/zustand` |
+| Redux Toolkit locale store | `@reduxjs/toolkit` | `@faang/i18n/redux` |
+
+The version floors are exactly the `peerDependencies` declared in
+`packages/i18n/package.json`:
+
+```json
+{
+  "i18next": "^26.0.0",
+  "react": "^19.0.0",
+  "react-i18next": "^17.0.0",
+  "zustand": "^5.0.15",
+  "@reduxjs/toolkit": "^2.12.0"
+}
+```
+
+`react`, `react-i18next`, `zustand`, and `@reduxjs/toolkit` are marked optional in
+`peerDependenciesMeta`, so a Node-only or Vite-only consumer installs nothing extra.
+
+## Subpath Exports
+
+Every entry in the package `exports` map, and what it gives you:
+
+| Subpath | Exports |
+|---|---|
+| `@faang/i18n` | `createI18n`, `resolveConfig`, locale helpers, `LruCache`, the loader classes, `emit`, and all core types |
+| `@faang/i18n/react` | `I18nProvider`, `useT`, `useLocale`, `useI18nRuntime`, `Trans`, `I18nContext`, `LocaleSnapshot` |
+| `@faang/i18n/next` | `i18nMiddleware`, `localeStaticParams`, `createI18nServer`, `defineRouteI18n`, `getHtmlAttributes`, `DEFAULT_COOKIE` |
+| `@faang/i18n/vite` | `i18nVitePlugin`, `localePrefix`, `matchLocaleFromPath`, `resolveLocaleOrNull` |
+| `@faang/i18n/zustand` | `createZustandLocaleStore`, `LocaleStore`, `LocaleSnapshot` |
+| `@faang/i18n/redux` | `localeSlice`, `localeChanged`, `localeStatusChanged`, `selectLocale`, `selectDir` |
+| `@faang/i18n/native` | `createNativeI18n` (throws in v1) |
+| `@faang/i18n/node` | `createNodeI18n` (throws in v1) |
+| `@faang/i18n/electron` | `createElectronI18n` (throws in v1) |
+| `@faang/i18n/catalogs/*` | the raw catalog JSON files, for static imports |
+| `@faang/i18n/cli` | `CLI_PACKAGE`, `CLI_VERSION`, `CLI_COMMANDS` |
+
+## What You Get
+
+`createI18n` returns an `I18nRuntime`: a single object that owns the i18next instance, the
+resolved config, and the tiered namespace loader. Your application passes that one object
+around; it never calls into i18next directly unless it opts out.
+
+## Related
+
+- [Quick Start](/getting-started/quick-start)
+- [Core Concepts](/getting-started/core-concepts)

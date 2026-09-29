@@ -1,0 +1,72 @@
+---
+title: التثبيت
+description: ثبّت @faang/i18n وأضف الحزم النظيرة لواجهة التشغيل الخاصة بك، واعرف المسار الفرعي الصحيح للاستيراد.
+---
+
+## المتطلبات
+
+- Node.js الإصدار 22 أو أحدث.
+- pnpm الإصدار 10، بما يوافق حقل `packageManager` في المستودع.
+- `i18next` الإصدار 26. وهو الحزمة النظيرة الوحيدة المطلوبة؛ أما بقية الحزم النظيرة فهي اختيارية
+  ولا تحتاجها إلا واجهة التشغيل التي تتبناها.
+
+## تثبيت الحزمة
+
+```bash
+# ثبّت الحزمة ومحرّكها المطلوب
+pnpm add @faang/i18n i18next
+```
+
+## إضافة الحزم النظيرة لواجهة التشغيل
+
+| واجهة التشغيل | الحزم المطلوب إضافتها | المسار الفرعي |
+|---|---|---|
+| React | `react` و`react-dom` و`react-i18next` | `@faang/i18n/react` |
+| Next.js App Router | الحزم النظيرة لـ React | `@faang/i18n/next` |
+| Vite (وقت البناء) | `vite` | `@faang/i18n/vite` |
+| متجر Zustand | `zustand` | `@faang/i18n/zustand` |
+| متجر Redux Toolkit | `@reduxjs/toolkit` | `@faang/i18n/redux` |
+
+حدود الإصدارات هي نفسها المعلنة في `peerDependencies` داخل `packages/i18n/package.json`:
+
+```json
+{
+  "i18next": "^26.0.0",
+  "react": "^19.0.0",
+  "react-i18next": "^17.0.0",
+  "zustand": "^5.0.15",
+  "@reduxjs/toolkit": "^2.12.0"
+}
+```
+
+الحزم `react` و`react-i18next` و`zustand` و`@reduxjs/toolkit` موسومة كاختيارية في
+`peerDependenciesMeta`، لذا لا يثبّت المستهلك الذي يستخدم Node فقط أو Vite فقط أي حزمة إضافية.
+
+## المسارات الفرعية المُصدَّرة
+
+كل مدخل في خريطة `exports` الخاصة بالحزمة، وما يوفّره:
+
+| المسار الفرعي | الصادرات |
+|---|---|
+| `@faang/i18n` | `createI18n` و`resolveConfig` ومساعدات اللغة و`LruCache` وفئات المُحمّل و`emit` وكل الأنواع الأساسية |
+| `@faang/i18n/react` | `I18nProvider` و`useT` و`useLocale` و`useI18nRuntime` و`Trans` و`I18nContext` و`LocaleSnapshot` |
+| `@faang/i18n/next` | `i18nMiddleware` و`localeStaticParams` و`createI18nServer` و`defineRouteI18n` و`getHtmlAttributes` و`DEFAULT_COOKIE` |
+| `@faang/i18n/vite` | `i18nVitePlugin` و`localePrefix` و`matchLocaleFromPath` و`resolveLocaleOrNull` |
+| `@faang/i18n/zustand` | `createZustandLocaleStore` و`LocaleStore` و`LocaleSnapshot` |
+| `@faang/i18n/redux` | `localeSlice` و`localeChanged` و`localeStatusChanged` و`selectLocale` و`selectDir` |
+| `@faang/i18n/native` | `createNativeI18n` (يرمي خطأً في الإصدار 1) |
+| `@faang/i18n/node` | `createNodeI18n` (يرمي خطأً في الإصدار 1) |
+| `@faang/i18n/electron` | `createElectronI18n` (يرمي خطأً في الإصدار 1) |
+| `@faang/i18n/catalogs/*` | ملفات JSON الخام للكتالوجات، للاستيراد الساكن |
+| `@faang/i18n/cli` | `CLI_PACKAGE` و`CLI_VERSION` و`CLI_COMMANDS` |
+
+## ما الذي تحصل عليه
+
+تُرجع `createI18n` كائن `I18nRuntime`: كائن واحد يملك نسخة i18next والإعدادات المُحسومة
+ومُحمّل مساحات الأسماء متعدد الطبقات. يمرّر تطبيقك هذا الكائن الواحد، ولا يستدعي i18next مباشرة
+إلا إذا اختار الخروج عن ذلك.
+
+## ذو صلة
+
+- [البدء السريع](/getting-started/quick-start)
+- [المفاهيم الأساسية](/getting-started/core-concepts)

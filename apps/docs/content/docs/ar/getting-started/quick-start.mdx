@@ -1,0 +1,73 @@
+---
+title: البدء السريع
+description: أنشئ كائن تشغيل، وحمّل مساحة أسماء، وترجم على الخادم وفي React.
+---
+
+## 1. أنشئ كائن التشغيل
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+  onEvent: (event) => console.log(event.type, event),
+})
+```
+
+تحسم `createI18n` القيم الافتراضية (`fallbackLng` تصبح `defaultLocale`، و`defaultNS` تصبح
+`'common'`، و`numberingSystem` تصبح `'latn'`) وتُرجع كائن `I18nRuntime`. لا يُجلب أي كتالوج في
+هذه المرحلة.
+
+## 2. حمّل مساحة أسماء
+
+```ts
+await runtime.loadNamespace('en', 'common')
+const t = runtime.getT('en', 'common')
+t('app.name') // "Acme"
+```
+
+تفحص `loadNamespace` ذاكرة التخزين المؤقت أولاً، ثم المخزن الدائم، ثم ناقل الكتالوج. ويعمل
+التحميل ضمن وعد واحد قيد التنفيذ لكل `lng:ns`، فيشارك المتصلون المتزامنون التحميل نفسه. وعندما
+تختلف اللغة المطلوبة عن اللغة الاحتياطية، تُحمّل حزمة اللغة الاحتياطية لمساحة الأسماء نفسها أيضاً.
+
+## 3. اعرض في React
+
+```tsx
+import { I18nProvider, useT } from '@faang/i18n/react'
+
+function App() {
+  return (
+    <I18nProvider runtime={runtime} locale="en">
+      <Greeting />
+    </I18nProvider>
+  )
+}
+
+function Greeting() {
+  const t = useT('common')
+  return <h1>{t('app.name')}</h1>
+}
+```
+
+يعكس المزوّد `{ lng, dir, isRtl, status }` إلى السياق ويمرّر نسخة i18next إلى
+`react-i18next`، فيعمل `useT` و`Trans` كالمعتاد.
+
+## 4. اقرأ سمات HTML
+
+```tsx
+import { getHtmlAttributes } from '@faang/i18n/next'
+
+const { lang, dir } = getHtmlAttributes('ar')
+return <html lang={lang} dir={dir}>{children}</html>
+```
+
+تحسم `getHtmlAttributes` اللغة بأمان وتُسقطها على اتجاه، فيحمل أول بايت من HTML قيمة `lang`
+و`dir` الصحيحتين.
+
+## ذو صلة
+
+- [التثبيت](/getting-started/installation)
+- [المفاهيم الأساسية](/getting-started/core-concepts)
+- [الخطافات](/packages/react/hooks)

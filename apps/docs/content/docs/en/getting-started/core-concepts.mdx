@@ -1,0 +1,66 @@
+---
+title: Core Concepts
+description: Runtime, catalog, namespace, shell, and locale — the five ideas that explain the whole design.
+---
+
+## Runtime
+
+`createI18n(config)` returns exactly one object, the `I18nRuntime`:
+
+| Field | Type | Purpose |
+|---|---|---|
+| `instance` | i18next `i18n` | the engine, created with `createInstance()` so apps never share global state |
+| `config` | `ResolvedConfig` | defaults already applied |
+| `loadNamespace` | `(lng, ns) => Promise<void>` | hydrate one namespace into i18next |
+| `prefetch` | `(lng, ns) => void` | fire-and-forget `loadNamespace`, deduped and capped |
+| `has` | `(lng, ns) => boolean` | whether the namespace is in the memory tier |
+| `getHtmlAttributes` | `(lng) => { lang, dir }` | safe first-paint attributes |
+| `getT` | `(lng, ns?) => TFunction` | a locale-fixed translator |
+
+The runtime is the only i18n object your app passes around. It is defined in
+`packages/i18n/src/core/types.ts` and built in `packages/i18n/src/core/create-i18n.ts`.
+
+## Catalogs and Namespaces
+
+A **catalog** is a directory of namespace JSON files, one directory per locale. A **namespace**
+is one JSON file and one network or `import()` unit. The package ships five shared namespaces —
+`common`, `errors`, `auth`, `validation`, `datetime` — declared in
+`packages/i18n/src/catalogs/index.ts`.
+
+Two of them are **shell** namespaces (`common`, `errors`): they are small, always needed, and
+eligible to be inlined into the first paint. The rest are **lazy**: loaded by the route that
+needs them.
+
+## Shell versus Lazy
+
+The design targets 2G networks by treating each namespace as a separately cacheable unit:
+
+- the shell namespace set is capped by a gzip budget (12 KiB combined for `common` + `errors`);
+- a single lazy namespace is capped at 16 KiB gzip;
+- the kernel bundle is capped at 12 KiB gzip.
+
+`packages/i18n/scripts/check-budget.mjs` enforces the catalog budgets; the value table also
+exists in code as `BUDGETS` in `packages/i18n/src/core/defaults.ts`.
+
+## Locale Resolution
+
+On the web the URL owns the locale: `/en/...` and `/ar/...`. `resolveLocale` in
+`packages/i18n/src/core/locale.ts` accepts a language tag, validates it against a safe pattern,
+matches it case-insensitively against the allowed list, and falls back to the default. `dirFor`
+maps a tag to `'ltr'` or `'rtl'` using the `RTL_LOCALES` set (`ar`, `he`, `fa`, `ur`).
+
+Cookie and `Accept-Language` headers never paint the page; they only drive a redirect. That is
+the zero-flicker rule in practice.
+
+## The Store Mirror
+
+When you use Zustand or Redux, the store holds a **mirror** of locale metadata only:
+`{ lng, dir, isRtl, status }`. It never holds strings — strings stay in i18next. The mirror is
+defined as `LocaleSnapshot` in `packages/i18n/src/react/context.ts` and mirrored by
+`LocaleStore` (Zustand) and `LocaleState` (Redux).
+
+## Related
+
+- [Architecture Overview](/architecture/overview)
+- [Core Types](/packages/kernel/types)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
