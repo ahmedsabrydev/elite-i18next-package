@@ -4,7 +4,7 @@ export default defineConfig({
   locales: ['en', 'ar'],
   extract: {
     input: ['packages/i18n/src/**/*.{ts,tsx}', 'apps/*/src/**/*.{ts,tsx}'],
-    ignore: ['**/__tests__/**', '**/*.test.{ts,tsx}', '**/*.test-d.ts'],
+    ignore: ['**/__tests__/**', '**/*.test.{ts,tsx}', '**/*.test-d.ts', 'apps/docs/**'],
     useTranslationNames: ['useTranslation', 'useT'],
     output: 'packages/i18n/catalogs/{{language}}/{{namespace}}.json',
     defaultNS: 'common',
