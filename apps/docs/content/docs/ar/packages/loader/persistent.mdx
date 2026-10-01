@@ -1,0 +1,71 @@
+---
+title: PersistentStore
+description: الطبقة الدائمة — تخزين موارد مساحات الأسماء المُحلَّلة في IndexedDB بين تحميلات الصفحة.
+---
+
+## الغرض
+
+يخزّن `PersistentStore` في `packages/i18n/src/loader/persistent.ts` مساحات الأسماء المُحلَّلة في
+IndexedDB كي لا يُعيد التحميل جلبها. وهو الطبقة الثانية: يُستشار قبل الشبكة ويُكتب بعد نجاح التحميل.
+
+## متى تستخدمه
+
+ينشئ `TieredBackend` نسخة تلقائياً. ولا تقدّم نسختك إلا حين تحتاج التحكم بدورة حياة المخزن أو استدعاء
+`clear()` بنفسك (مثلاً بعد نشر كتالوجات جديدة).
+
+## الاستخدام
+
+```ts
+import { PersistentStore } from '@faang/i18n'
+
+const persistent = new PersistentStore()
+await persistent.set('en', 'common', { greeting: 'Hello' }, 'a1b2c3d4e5f6')
+await persistent.get('en', 'common', 'a1b2c3d4e5f6') // { greeting: 'Hello' }
+await persistent.get('en', 'common', 'differenthash') // undefined
+await persistent.clear()
+```
+
+## واجهة البرمجة
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `get` | `(lng, ns, hash?) => Promise<NamespaceResources \| undefined>` | يجب تطابق hash اختياري للإصابة |
+| `set` | `(lng, ns, resources, hash?) => Promise<void>` | upsert بالمفتاح `"<lng>:<ns>"` |
+| `clear` | `() => Promise<void>` | يُفرغ مخزن الكائنات |
+
+## تخطيط التخزين
+
+| الثابت | القيمة |
+|---|---|
+| `DB_NAME` | `'faang-i18n'` |
+| `STORE_NAME` | `'namespaces'` |
+| `DB_VERSION` | `1` |
+
+السجلات `{ id, lng, ns, hash?, resources }` بـ `keyPath: 'id'` و`id = "<lng>:<ns>"`.
+
+## المعاملات والمُرجَع
+
+يُحسم `get` إلى `undefined` عند الغياب أو عدم تطابق hash أو أي خطأ تخزين. ويُحسم `set` و`clear` عند
+اكتمال المعاملة، ويُحسمان أيضاً (لا يُرفضان) عند الخطأ. ويتيح `hash` الاختياري إبطال السجلات القديمة
+عند تغيّر محتوى الكتالوج.
+
+## السلوك والحالات الحدّية
+
+- في العرض من الخادم أو الوضع الخاص يكون `indexedDB` قيمته `undefined`؛ فيُحسم `#open()` إلى
+  `undefined` وتصبح كل طريقة عملية لا أثر لها. هذا هو السلوك المتوقّع على الخادم.
+- تُفتح قاعدة البيانات بتكاسل عند أول استخدام وتُخزَّن وعدة الاتصال في `#dbPromise`.
+- ينشئ معالج الترقية مخزن الكائنات فقط إن كان غائباً، ففتح قاعدة v1 موجودة آمن.
+- تُغلَّف كل استدعاءات IndexedDB بحيث تُحسم المعاملة المحجوبة أو الملغاة أو الفاشلة بدل أن تُرفض. فتتدهور
+  الأخطاء صامتة إلى `undefined`.
+- تُخزَّن `hash` لكن الخلفية المُدرَّجة تستدعي `get`/`set` بلا hash حالياً، فإبطال hash متاح لكنه غير
+  موصول بعد (تأجيل مسجَّل).
+
+## أنماط الفشل
+
+لا ترفض أي عملية. وأسوأ حالة هي الغياب، وهو ما يرسل المُحمّل إلى الطبقة التالية.
+
+## ذو صلة
+
+- [TieredBackend](/packages/loader/backend)
+- [MemoryStore](/packages/loader/memory)
+- [الأمان وأنماط الفشل](/architecture/security-and-failure)

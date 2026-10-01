@@ -1,0 +1,105 @@
+---
+title: TieredBackend
+description: مُحمّل مساحات الأسماء رباعي الطبقات الذي يجمع الذاكرة وIndexedDB والاستيراد الديناميكي وfetch.
+---
+
+## الغرض
+
+يحتوي `packages/i18n/src/loader/backend.ts` نقل المُحمّل الافتراضي. وهو يحسم مساحة أسماء بتجربة
+الطبقات بالترتيب — الذاكرة الدافئة، ثم IndexedDB، ثم استيراد ديناميكي (مع مسار `createRequire` في
+Node)، ثم `fetch` — ويخزّن النتائج الناجحة في الطبقات الأدنى. و`namespaceChunkLoader` هو المصدر
+الافتراضي، و`TieredBackend` هو المُنسّق.
+
+## متى تستخدمه
+
+يوصّل `createI18n` كائن `TieredBackend` لك. ابنِ واحداً مباشرةً لتخصيص طبقة (مثلاً مخزن دائم مخصص)
+أو لتزويد `NamespaceLoader` مخصص مع الحفاظ على إزالة التكرار والتخزين المؤقت والقياسات.
+
+## الاستخدام
+
+```ts
+import { TieredBackend, namespaceChunkLoader } from '@faang/i18n'
+
+const backend = new TieredBackend({
+  config: resolved,                 // ResolvedConfig
+  loader: namespaceChunkLoader(resolved),
+  fetcher: fetch,                   // اختياري
+})
+
+await backend.load('en', 'common')
+backend.has('en', 'common') // true بعد التحميل
+backend.prefetch('ar', 'common')  // إطلاق بلا انتظار
+```
+
+## واجهة البرمجة
+
+### NamespaceLoader
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="NamespaceLoader" />
+
+### TieredBackendOptions
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="TieredBackendOptions" />
+
+### الأعضاء
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `new TieredBackend` | `(options: TieredBackendOptions)` | كل طبقة تأخذ افتراضياً إن أُهملت |
+| `load` | `(lng, ns) => Promise<NamespaceResources \| undefined>` | المسار الكامل |
+| `prefetch` | `(lng, ns) => void` | يستدعي `load` ويُهمل الوعد |
+| `has` | `(lng, ns) => boolean` | الذاكرة الدافئة فقط |
+| `inflightCount` | `() => number` | عدد الطلبات الجارية |
+
+### namespaceChunkLoader
+
+يُرجع `namespaceChunkLoader(config)` دالة `NamespaceLoader` تبني المُحدِّدات المرشحة من
+`config.catalogs`:
+
+```ts
+const candidates = shared
+  ? [`${shared}/${lng}/${ns}.json`, `${publicPath}/${lng}/${ns}.json`]
+  : [`${publicPath}/${lng}/${ns}.json`]
+```
+
+ويجرّب كل مرشح عبر `importJson`، ثم عند ضبط `config.publicPath` يلجأ إلى:
+
+```ts
+fetch(`${config.publicPath}/${lng}/${ns}.json`)
+```
+
+فقط الاستجابة غير `ok` أو الرمي يُنتج `undefined`.
+
+## نقل createRequire في Node
+
+لـ `importJson` مساران. في Node (`process.versions?.node`) يستورد `node:module` ديناميكياً ويستخدم
+`createRequire(import.meta.url)` مع `require.resolve(specifier)`. والاستيراد الديناميكي موسوم بـ
+`/* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */` كي تتركه المُجمِّعات. وإن
+فشل الحسم انتقل إلى `import(specifier)` الديناميكي العادي، وهو موسوم أيضاً، ويفكّ `mod.default ?? mod`.
+وكل خطوة داخل `try/catch` وتُرجع `undefined` عند الفشل. ولهذا تقبل المُجمِّعات (بما فيها Next/Turbopack)
+الوحدة: لا `require` ديناميكي بلا وسم ولا استيراد JSON ساكن قد يُزيله `esbuild`/`tsup`.
+
+## السلوك والحالات الحدّية
+
+- ترتيب الطبقات عند الغياب: `inflight.run` ← `persistent.get` ← `loader(lng, ns)` ← ثم عند النجاح
+  `persistent.set`. وإصابة الذاكرة تقطع كل شيء وتُصدر `ns.cache_hit`.
+- الغياب (موارد غير صحيحة) يُرجع `undefined` **دون** تخزين مؤقت، فتـُعاد المحاولة في الاستدعاء التالي.
+- التحميل الناجح يضبط الذاكرة ثم يُصدر `ns.load` مع `ms` (زمن الجدار) و`bytes`
+  (`JSON.stringify(...).length`، أو `undefined` إن رمى، مثلاً لبيانات دائرية).
+- `prefetch` إطلاق بلا انتظار عمداً؛ لا يُرفض للمستدعي أبداً.
+- يعكس `has` الطبقة الدافئة فقط؛ فمساحة أسماء موجودة في IndexedDB تظل تُرجع `false`.
+
+## أنماط الفشل
+
+- تُلتقط مهلة `InflightLoader` وتُصدر كـ `ns.timeout` باستخدام `lng`/`ns` من الخطأ وتُحسم إلى
+  `undefined`.
+- تُلتقط الأخطاء غير المتعلقة بالمهلة وتُحسم إلى `undefined` **بلا** حدث (تأجيل مسجَّل).
+- لا يُرفض `load` أبداً.
+
+## ذو صلة
+
+- [namespaceChunkLoader](/packages/loader/backend) مُعرَّف على هذه الصفحة.
+- [InflightLoader](/packages/loader/inflight)
+- [MemoryStore](/packages/loader/memory)
+- [PersistentStore](/packages/loader/persistent)
+- [المراقبة](/architecture/observability)

@@ -1,0 +1,61 @@
+---
+title: MemoryStore
+description: The warm tier — an in-process LRU of parsed namespace resources.
+---
+
+## Purpose
+
+`MemoryStore` in `packages/i18n/src/loader/memory.ts` is the first and fastest tier of the load
+pipeline. It wraps an `LruCache<string, NamespaceResources>` keyed by `"<lng>:<ns>"` and holds
+already-parsed JSON for the lifetime of the runtime.
+
+## When to Use It
+
+It is created automatically by `TieredBackend`. Reach for it only if you build a custom backend and
+want the same warm-tier behavior, or if you need `entries()` for diagnostics.
+
+## Usage
+
+```ts
+import { MemoryStore } from '@faang/i18n'
+
+const memory = new MemoryStore()
+memory.set('en', 'common', { greeting: 'Hello' })
+memory.get('en', 'common') // { greeting: 'Hello' }
+memory.has('en', 'common') // true
+memory.entries() // 1
+```
+
+## API
+
+| Member | Signature | Notes |
+|---|---|---|
+| `key` | `(lng, ns) => string` | returns `` `${lng}:${ns}` `` |
+| `get` | `(lng, ns) => NamespaceResources \| undefined` | refreshes recency |
+| `set` | `(lng, ns, resources) => void` | stores by reference |
+| `has` | `(lng, ns) => boolean` | no recency change |
+| `entries` | `() => number` | current count |
+
+## Parameters and Returns
+
+Both `lng` and `ns` are plain strings. `get` returns the parsed object you stored (same reference) or
+`undefined`. Capacity is fixed at `LOADER.lruMaxEntries` (50) and is not configurable.
+
+## Behavior and Edge Cases
+
+- Construction takes no arguments; the `LruCache` capacity comes from `LOADER.lruMaxEntries`.
+- Keys are concatenated strings, so `('en:ar', 'X')` and `('en', 'ar:X')` would collide. Namespace
+  ids and locales do not contain `:` in practice, so this is a non-issue for real catalogs.
+- Eviction follows the underlying `LruCache` policy: the least recently read or written namespace
+  for a locale is dropped first once 50 entries are exceeded.
+- The store never expires entries by time; only capacity evicts.
+
+## Failure Modes
+
+None. Every operation returns or stores synchronously and total.
+
+## Related
+
+- [LruCache](/packages/cache/lru)
+- [TieredBackend](/packages/loader/backend)
+- [PersistentStore](/packages/loader/persistent)

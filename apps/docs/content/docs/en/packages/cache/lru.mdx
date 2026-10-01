@@ -1,0 +1,67 @@
+---
+title: LruCache
+description: The small, dependency-free least-recently-used map that backs the memory tier.
+---
+
+## Purpose
+
+`LruCache<K, V>` in `packages/i18n/src/cache/lru.ts` is a bounded `Map` that evicts the least
+recently used entry when it grows past its capacity. It is the only cache primitive in the package;
+`MemoryStore` composes it.
+
+## When to Use It
+
+Use it directly when you need a bounded, in-memory cache with the same semantics. Applications rarely
+touch it; every namespace load path in the runtime goes through `MemoryStore`, which is an
+`LruCache` keyed by `"<lng>:<ns>"`.
+
+## Usage
+
+```ts
+import { LruCache } from '@faang/i18n'
+
+const cache = new LruCache<string, number>(2)
+cache.set('a', 1)
+cache.set('b', 2)
+cache.get('a') // 1 — 'a' is now the most recently used
+cache.set('c', 3) // evicts 'b'
+cache.has('b') // false
+```
+
+## API
+
+| Member | Signature | Notes |
+|---|---|---|
+| `new LruCache` | `(capacity: number)` | throws `RangeError` if not an integer `>= 1` |
+| `get` | `(key: K) => V \| undefined` | marks the key most-recently-used |
+| `set` | `(key: K, value: V) => void` | inserts and evicts from the front until under capacity |
+| `has` | `(key: K) => boolean` | does not change recency |
+| `delete` | `(key: K) => boolean` | returns whether the key existed |
+| `size` | `() => number` | current entry count |
+| `keys` | `() => K[]` | keys from least to most recently used |
+
+## Parameters and Returns
+
+`capacity` must be an integer greater than or equal to 1. `get` returns `undefined` for a miss and
+otherwise the stored reference (values are not cloned). `keys` returns a snapshot array; mutating it
+does not affect the cache.
+
+## Behavior and Edge Cases
+
+- Recency is defined by `get` and `set`: a `get` hit deletes and re-inserts the entry, moving it to
+  the back of the underlying `Map`'s insertion order.
+- `has` performs a plain membership check and does **not** refresh recency.
+- `set` on an existing key updates the value and refreshes recency rather than duplicating.
+- Eviction is a `while` loop, so a `set` after shrinking the capacity conceptually still trims to the
+  configured capacity (capacity is immutable after construction).
+- The store holds references, not deep copies. Mutating a cached value mutates what callers receive.
+
+## Failure Modes
+
+The constructor is the only thrower: a non-integer, `0`, or negative capacity raises `RangeError`.
+All other operations are total.
+
+## Related
+
+- [MemoryStore](/packages/loader/memory)
+- [Defaults and Constants](/packages/kernel/defaults)

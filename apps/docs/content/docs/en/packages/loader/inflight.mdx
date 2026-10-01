@@ -1,0 +1,77 @@
+---
+title: InflightLoader
+description: Request deduplication with a timeout and a single retry, plus the TimeoutError it throws.
+---
+
+## Purpose
+
+`InflightLoader` in `packages/i18n/src/loader/inflight.ts` guarantees that concurrent requests for
+the same `"<lng>:<ns>"` key share one promise, bounds each attempt with a timeout, and retries once.
+`TimeoutError` is the signal used by the tiered backend to emit `ns.timeout`.
+
+## When to Use It
+
+`TieredBackend` constructs one. Supply your own to tune `timeoutMs`, `retries`, or `retryDelayMs`
+without changing the global `LOADER` constants.
+
+## Usage
+
+```ts
+import { InflightLoader, TimeoutError } from '@faang/i18n'
+
+const inflight = new InflightLoader({ timeoutMs: 3000, retries: 1 })
+const task = () => fetch('/catalogs/en/common.json').then((r) => r.json())
+
+const [a, b] = await Promise.all([
+  inflight.run('en:common', task),
+  inflight.run('en:common', task), // shares the first promise
+])
+inflight.size() // 0 once settled
+```
+
+## API
+
+| Member | Signature | Notes |
+|---|---|---|
+| `new InflightLoader` | `(options?: { timeoutMs?, retries?, retryDelayMs? })` | each field defaults from `LOADER` |
+| `run` | `<T>(key, task, meta?) => Promise<T>` | returns the in-flight promise on a duplicate key |
+| `size` | `() => number` | number of in-flight keys |
+
+### TimeoutError
+
+| Property | Type | Meaning |
+|---|---|---|
+| `name` | `'TimeoutError'` | fixed |
+| `key` | `string` | the `` `${lng}:${ns}` `` key |
+| `ms` | `number` | the timeout that elapsed |
+| `lng` | `string \| undefined` | from `meta` |
+| `ns` | `string \| undefined` | from `meta` |
+
+## Parameters and Returns
+
+`run`'s `meta` carries `{ lng, ns }` purely so the thrown `TimeoutError` can name the namespace for
+telemetry. `run` returns the task's value, or rejects with the last error after all attempts fail;
+the key is removed from the in-flight map in a `.finally` in all cases.
+
+## Behavior and Edge Cases
+
+- Duplicate calls with the same key return the exact same promise object, so callers cannot observe
+  two network requests.
+- The timeout races the task; the timer is always cleared in a `.finally`, so no stray handles leak.
+- Setting `timeoutMs <= 0` disables the timeout and runs the task directly.
+- Total attempts = `retries + 1`. With the default `retries: 1`, a failing task runs at most twice,
+  separated by `retryDelayMs` (300ms).
+- Once the promise settles, the key is deleted, so the next `run` starts a fresh attempt.
+
+## Failure Modes
+
+- The final error propagates to the caller. `TieredBackend` catches it and converts a `TimeoutError`
+  into an `ns.timeout` event and an `undefined` result.
+- A task that rejects with a non-timeout error is retried and then rethrown; the backend swallows it
+  and emits no event.
+
+## Related
+
+- [TieredBackend](/packages/loader/backend)
+- [Defaults and Constants](/packages/kernel/defaults)
+- [Observability](/architecture/observability)

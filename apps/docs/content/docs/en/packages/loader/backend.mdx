@@ -1,0 +1,107 @@
+---
+title: TieredBackend
+description: The four-tier namespace loader that composes memory, IndexedDB, dynamic import, and fetch.
+---
+
+## Purpose
+
+`packages/i18n/src/loader/backend.ts` contains the default loader transport. It resolves a namespace
+by trying tiers in order — warm memory, then IndexedDB, then a dynamic import (with a Node
+`createRequire` path), then `fetch` — and stores successful results back into the lower tiers.
+`namespaceChunkLoader` is the default source; `TieredBackend` orchestrates.
+
+## When to Use It
+
+`createI18n` wires a `TieredBackend` for you. Build one directly to customize a tier (for example, a
+custom persistent store) or to supply a custom `NamespaceLoader` while keeping
+deduplication/caching/telemetry.
+
+## Usage
+
+```ts
+import { TieredBackend, namespaceChunkLoader } from '@faang/i18n'
+
+const backend = new TieredBackend({
+  config: resolved,                 // ResolvedConfig
+  loader: namespaceChunkLoader(resolved),
+  fetcher: fetch,                   // optional
+})
+
+await backend.load('en', 'common')
+backend.has('en', 'common') // true once loaded
+backend.prefetch('ar', 'common')  // fire-and-forget
+```
+
+## API
+
+### NamespaceLoader
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="NamespaceLoader" />
+
+### TieredBackendOptions
+
+<AutoTypeTable path="../../packages/i18n/src/loader/backend.ts" name="TieredBackendOptions" />
+
+### Members
+
+| Member | Signature | Notes |
+|---|---|---|
+| `new TieredBackend` | `(options: TieredBackendOptions)` | every tier defaults if omitted |
+| `load` | `(lng, ns) => Promise<NamespaceResources \| undefined>` | full pipeline |
+| `prefetch` | `(lng, ns) => void` | calls `load`, discards the promise |
+| `has` | `(lng, ns) => boolean` | warm memory only |
+| `inflightCount` | `() => number` | in-flight request count |
+
+### namespaceChunkLoader
+
+`namespaceChunkLoader(config)` returns a `NamespaceLoader` that builds candidate specifiers from
+`config.catalogs`:
+
+```ts
+const candidates = shared
+  ? [`${shared}/${lng}/${ns}.json`, `${publicPath}/${lng}/${ns}.json`]
+  : [`${publicPath}/${lng}/${ns}.json`]
+```
+
+It tries each candidate with `importJson`, and, when `config.publicPath` is set, falls back to:
+
+```ts
+fetch(`${config.publicPath}/${lng}/${ns}.json`)
+```
+
+Only a non-`ok` response or a throw yields `undefined`.
+
+## The `createRequire` Node Transport
+
+`importJson` has two paths. In Node (`process.versions?.node`), it dynamically imports `node:module`
+and uses `createRequire(import.meta.url)` plus `require.resolve(specifier)`. The dynamic import is
+annotated `/* @vite-ignore */ /* webpackIgnore: true */ /* turbopackIgnore: true */` so bundlers leave
+it alone. If resolution fails it falls through to the plain dynamic `import(specifier)`, which is
+also annotated, and unwraps `mod.default ?? mod`. Every step is inside `try/catch` and returns
+`undefined` on failure. This is why bundlers (Next/Turbopack included) accept the module: there is no
+unannotated dynamic `require` and no static JSON import that `esbuild`/`tsup` would strip.
+
+## Behavior and Edge Cases
+
+- Tier order on a miss: `inflight.run` → `persistent.get` → `loader(lng, ns)` → on success
+  `persistent.set`. A memory hit short-circuits everything and emits `ns.cache_hit`.
+- A miss (falsy resources) returns `undefined` **without** caching, so the next call retries.
+- Successful loads set memory, then emit `ns.load` with `ms` (wall time) and `bytes`
+  (`JSON.stringify(...).length`, or `undefined` if it throws, e.g. on circular data).
+- `prefetch` is intentionally fire-and-forget; it never rejects to the caller.
+- `has` reflects only the warm tier; a namespace present in IndexedDB still reports `false`.
+
+## Failure Modes
+
+- Timeout from `InflightLoader` is caught, emitted as `ns.timeout` using the error's `lng`/`ns`, and
+  resolved as `undefined`.
+- Non-timeout errors are caught and resolved as `undefined` with **no** event (a recorded deferral).
+- `load` never rejects.
+
+## Related
+
+- [namespaceChunkLoader](/packages/loader/backend) is defined on this page.
+- [InflightLoader](/packages/loader/inflight)
+- [MemoryStore](/packages/loader/memory)
+- [PersistentStore](/packages/loader/persistent)
+- [Observability](/architecture/observability)

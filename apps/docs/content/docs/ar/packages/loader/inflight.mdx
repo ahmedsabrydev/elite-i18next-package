@@ -1,0 +1,75 @@
+---
+title: InflightLoader
+description: إزالة تكرار الطلبات مع مهلة إعادة محاولة واحدة، وخطأ TimeoutError الذي يرميه.
+---
+
+## الغرض
+
+يضمن `InflightLoader` في `packages/i18n/src/loader/inflight.ts` أن الطلبات المتزامنة للمفتاح نفسه
+`"<lng>:<ns>"` تتشارك وعداً واحداً، ويحدّ كل محاولة بمهلة، ويعيد المحاولة مرة واحدة. و`TimeoutError`
+هي الإشارة التي تستخدمها الخلفية المُدرَّجة لإصدار `ns.timeout`.
+
+## متى تستخدمه
+
+ينشئ `TieredBackend` نسخة. وقدّم نسختك لضبط `timeoutMs` أو `retries` أو `retryDelayMs` دون تغيير
+ثوابت `LOADER` العامة.
+
+## الاستخدام
+
+```ts
+import { InflightLoader, TimeoutError } from '@faang/i18n'
+
+const inflight = new InflightLoader({ timeoutMs: 3000, retries: 1 })
+const task = () => fetch('/catalogs/en/common.json').then((r) => r.json())
+
+const [a, b] = await Promise.all([
+  inflight.run('en:common', task),
+  inflight.run('en:common', task), // يتشارك الوعد الأول
+])
+inflight.size() // 0 بعد الحسم
+```
+
+## واجهة البرمجة
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `new InflightLoader` | `(options?: { timeoutMs?, retries?, retryDelayMs? })` | كل حقل يأخذ افتراضيه من `LOADER` |
+| `run` | `<T>(key, task, meta?) => Promise<T>` | يُرجع الوعد الجاري عند تكرار المفتاح |
+| `size` | `() => number` | عدد المفاتيح الجارية |
+
+### TimeoutError
+
+| الخاصية | النوع | المعنى |
+|---|---|---|
+| `name` | `'TimeoutError'` | ثابت |
+| `key` | `string` | مفتاح `` `${lng}:${ns}` `` |
+| `ms` | `number` | المهلة المنقضية |
+| `lng` | `string \| undefined` | من `meta` |
+| `ns` | `string \| undefined` | من `meta` |
+
+## المعاملات والمُرجَع
+
+يحمل `meta` في `run` القيمتين `{ lng, ns }` فقط كي يسمّي `TimeoutError` المرميّ مساحة الأسماء
+للقياسات. ويُرجع `run` قيمة المهمة، أو يُرفض بآخر خطأ بعد فشل كل المحاولات؛ ويُحذف المفتاح من خريطة
+الطلبات الجارية في `.finally` في كل الحالات.
+
+## السلوك والحالات الحدّية
+
+- الاستدعاءات المكررة بالمفتاح نفسه تُرجع كائن الوعد نفسه تماماً، فلا يرى المستدعون طلبين.
+- تتسابق المهلة مع المهمة؛ ويُلغى المؤقّت دائماً في `.finally` فلا تتسرب مقابض.
+- ضبط `timeoutMs <= 0` يُعطّل المهلة ويشغّل المهمة مباشرة.
+- مجموع المحاولات = `retries + 1`. وبالافتراضي `retries: 1` تُشغَّل المهمة الفاشلة مرتين على الأكثر
+  بفاصل `retryDelayMs` (300ms).
+- بمجرد حسم الوعد يُحذف المفتاح، فتبدأ `run` التالية محاولة جديدة.
+
+## أنماط الفشل
+
+- ينتقل الخطأ النهائي إلى المستدعي. ويلتقطه `TieredBackend` ويحوّل `TimeoutError` إلى حدث
+  `ns.timeout` ونتيجة `undefined`.
+- المهمة التي تُرفض بخطأ غير مهلة تُعاد محاولتها ثم تُرمى من جديد؛ وتبتلعها الخلفية ولا تُصدر حدثاً.
+
+## ذو صلة
+
+- [TieredBackend](/packages/loader/backend)
+- [الافتراضات والثوابت](/packages/kernel/defaults)
+- [المراقبة](/architecture/observability)

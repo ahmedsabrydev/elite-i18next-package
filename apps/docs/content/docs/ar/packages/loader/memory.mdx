@@ -1,0 +1,61 @@
+---
+title: MemoryStore
+description: الطبقة الدافئة — مخزن LRU داخل العملية لموارد مساحات الأسماء المُحلَّلة.
+---
+
+## الغرض
+
+`MemoryStore` في `packages/i18n/src/loader/memory.ts` هو الطبقة الأولى والأسرع في مسار التحميل.
+يلفّ `LruCache<string, NamespaceResources>` مفتاحه `"<lng>:<ns>"` ويحفظ JSON مُحلَّلاً بالفعل طوال
+عمر زمن التشغيل.
+
+## متى تستخدمه
+
+يُنشئه `TieredBackend` تلقائياً. ولا تلجأ إليه إلا إذا بنيت خلفية مخصصة وأردت سلوك الطبقة الدافئة
+نفسه، أو احتجت `entries()` للتشخيص.
+
+## الاستخدام
+
+```ts
+import { MemoryStore } from '@faang/i18n'
+
+const memory = new MemoryStore()
+memory.set('en', 'common', { greeting: 'Hello' })
+memory.get('en', 'common') // { greeting: 'Hello' }
+memory.has('en', 'common') // true
+memory.entries() // 1
+```
+
+## واجهة البرمجة
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `key` | `(lng, ns) => string` | يُرجع `` `${lng}:${ns}` `` |
+| `get` | `(lng, ns) => NamespaceResources \| undefined` | يُجدّد الأحدثية |
+| `set` | `(lng, ns, resources) => void` | يخزّن بالمرجع |
+| `has` | `(lng, ns) => boolean` | بلا تغيير للأحدثية |
+| `entries` | `() => number` | العدد الحالي |
+
+## المعاملات والمُرجَع
+
+كلا `lng` و`ns` نصّان عاديان. ويُرجع `get` الكائن المُحلَّل الذي خزّنته (المرجع نفسه) أو `undefined`.
+والسعة ثابتة عند `LOADER.lruMaxEntries` (50) وغير قابلة للضبط.
+
+## السلوك والحالات الحدّية
+
+- لا يستقبل الإنشاء أي وسائط؛ وتأتي سعة `LruCache` من `LOADER.lruMaxEntries`.
+- المفاتيح نصوص مدمجة، لذا يتصادم `('en:ar', 'X')` مع `('en', 'ar:X')`. ومعرّفات مساحات الأسماء
+  واللغات لا تحتوي `:` عملياً، فليس هذا مشكلة للكتالوجات الحقيقية.
+- تتبع الإزالة سياسة `LruCache` الأساسية: تُسقط أولاً مساحة الأسماء الأقل قراءةً أو كتابةً للغة بعد
+  تجاوز 50 مدخلاً.
+- لا يُنتهي صلاحية المدخلات بمرور الوقت؛ الإزالة بالسعة فقط.
+
+## أنماط الفشل
+
+لا شيء. كل عملية تُرجع أو تخزّن بشكل متزامن وكلي.
+
+## ذو صلة
+
+- [LruCache](/packages/cache/lru)
+- [TieredBackend](/packages/loader/backend)
+- [PersistentStore](/packages/loader/persistent)

@@ -1,0 +1,73 @@
+---
+title: PersistentStore
+description: The durable tier — IndexedDB storage of parsed namespace resources between page loads.
+---
+
+## Purpose
+
+`PersistentStore` in `packages/i18n/src/loader/persistent.ts` caches parsed namespaces in IndexedDB
+so a reload does not refetch them. It is the second tier: consulted before the network, written after
+a successful load.
+
+## When to Use It
+
+`TieredBackend` creates one automatically. Provide your own instance only when you need to control
+the store's lifecycle or call `clear()` yourself (for example, after publishing new catalogs).
+
+## Usage
+
+```ts
+import { PersistentStore } from '@faang/i18n'
+
+const persistent = new PersistentStore()
+await persistent.set('en', 'common', { greeting: 'Hello' }, 'a1b2c3d4e5f6')
+await persistent.get('en', 'common', 'a1b2c3d4e5f6') // { greeting: 'Hello' }
+await persistent.get('en', 'common', 'differenthash') // undefined
+await persistent.clear()
+```
+
+## API
+
+| Member | Signature | Notes |
+|---|---|---|
+| `get` | `(lng, ns, hash?) => Promise<NamespaceResources \| undefined>` | optional hash must match to hit |
+| `set` | `(lng, ns, resources, hash?) => Promise<void>` | upserts by `"<lng>:<ns>"` |
+| `clear` | `() => Promise<void>` | empties the object store |
+
+## Storage Layout
+
+| Constant | Value |
+|---|---|
+| `DB_NAME` | `'faang-i18n'` |
+| `STORE_NAME` | `'namespaces'` |
+| `DB_VERSION` | `1` |
+
+Records are `{ id, lng, ns, hash?, resources }` with `keyPath: 'id'` and `id = "<lng>:<ns>"`.
+
+## Parameters and Returns
+
+`get` resolves `undefined` on a miss, a hash mismatch, or any storage error. `set` and `clear`
+resolve when the transaction completes and also resolve (never reject) on error. The optional `hash`
+lets a caller invalidate stale records when catalog content changes.
+
+## Behavior and Edge Cases
+
+- In SSR or private mode, `indexedDB` is `undefined`; `#open()` resolves `undefined` and every method
+  becomes a cheap no-op. This is the expected server-side behavior.
+- The database is opened lazily on first use and the connection promise is memoized in `#dbPromise`.
+- The upgrade handler creates the object store only if absent, so opening against an existing v1
+  database is safe.
+- Every IndexedDB callback is wrapped so a blocked, aborted, or errored transaction resolves rather
+  than rejects. Failures degrade silently to `undefined`.
+- The `hash` argument is stored but the tiered backend currently calls `get`/`set` without one, so
+  hash-based invalidation is available but not yet wired (a recorded deferral).
+
+## Failure Modes
+
+No operation rejects. The worst case is a miss, which sends the loader to the next tier.
+
+## Related
+
+- [TieredBackend](/packages/loader/backend)
+- [MemoryStore](/packages/loader/memory)
+- [Security and Failure Modes](/architecture/security-and-failure)
