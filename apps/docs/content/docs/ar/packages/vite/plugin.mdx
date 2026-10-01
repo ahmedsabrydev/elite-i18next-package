@@ -1,0 +1,83 @@
+---
+title: إضافة Vite للبيان
+description: i18nVitePlugin يفحص الكتالوجات ويُصدر أصل i18n-manifest.json مُجزّأً في البناء.
+---
+
+## الغرض
+
+يفحص `i18nVitePlugin` في `packages/i18n/src/vite/plugin.ts` دليل الكتالوجات وقت البناء ويُصدر أصلاً
+`i18n-manifest.json` يسجّل تجزئة محتوى وحجم بايتات لكل مساحة أسماء في كل لغة. ويتيح البيان لزمن
+التشغيل أو شبكة توزيع المحتوى اكتشاف الكتالوجات المتغيّرة دون قراءتها كلها.
+
+## متى تستخدمه
+
+أضفه إلى `plugins` في `vite.config.ts` لتطبيق Vite يشحن كتالوجات JSON. وهو أداة وقت بناء فقط؛ لا
+يؤثر على مُحمّل زمن التشغيل الذي يظل يجلب ملفات الكتالوج نفسها.
+
+## الاستخدام
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import { i18nVitePlugin } from '@faang/i18n/vite'
+
+export default defineConfig({
+  plugins: [
+    i18nVitePlugin({
+      catalogsDir: 'public/catalogs',
+      locales: ['en', 'ar'],
+    }),
+  ],
+})
+```
+
+مع وجود `public/catalogs/en/common.json` يُصدر البناء `i18n-manifest.json` يحتوي مثلاً
+`locales.en.common = { hash: 'a1b2c3d4e5f6', bytes: 812 }`.
+
+## واجهة البرمجة
+
+```ts
+function i18nVitePlugin(options: I18nVitePluginOptions): {
+  name: string
+  buildStart(): void
+  generateBundle(this: unknown): { fileName: string; source: string }[]
+}
+```
+
+### I18nVitePluginOptions
+
+<AutoTypeTable path="../../packages/i18n/src/vite/plugin.ts" name="I18nVitePluginOptions" />
+
+### I18nManifest
+
+<AutoTypeTable path="../../packages/i18n/src/vite/plugin.ts" name="I18nManifest" />
+
+## المعاملات والمُرجَع
+
+| الخيار | النوع | ملاحظات |
+|---|---|---|
+| `catalogsDir` | `string` | دليل يضم دليلاً فرعياً لكل لغة |
+| `locales` | `readonly string[]` | اللغات المفحوصة بالترتيب |
+
+تُرجع الإضافة كائن إضافة Vite باسم `name: 'faang-i18n'`.
+
+## السلوك والحالات الحدّية
+
+- تحسب `buildStart` البيان باكراً؛ وتعيد `generateBundle` حسابه فقط إن كان لا يزال فارغاً (مثلاً عند
+  استخدامها خارج بناء كامل).
+- تُفحص فقط ملفات `*.json` من المستوى الأعلى داخل دليل كل لغة مباشرةً؛ وتُهمَل الأدلة المتداخلة.
+- كل تجزئة هي أول 12 محرفاً سادس عشرياً من SHA-256 لبايتات الملف؛ و`bytes` هي `source.byteLength`
+  (البايتات المقروءة من القرص لا طول النص بترميز UTF-16).
+- يُصدر البيان عبر `this.emitFile` عندما يوفّر سياق Rollup/Vite الدالة، ويُعاد أيضاً من
+  `generateBundle`. وإعادة الأصل نفسه وإصداره أمر مقصود: يجعل الإضافة قابلة للاختبار بلا سياق حزم.
+
+## أنماط الفشل
+
+ترمي `readdirSync(dir)` إن لم يوجد دليل لغة. تأكّد من وجود دليل كتالوج لكل لغة في `locales` قبل تشغيل
+البناء.
+
+## ذو صلة
+
+- [مساعدات توجيه Vite](/packages/vite/routes)
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
+- [PersistentStore](/packages/loader/persistent) يستخدم التجزئات للإبطال.

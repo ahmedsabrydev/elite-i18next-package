@@ -1,0 +1,96 @@
+---
+title: Redirect Middleware
+description: i18nMiddleware, localeStaticParams, DEFAULT_COOKIE, and the request/redirect shapes.
+---
+
+## Purpose
+
+`packages/i18n/src/next/middleware.ts` decides which locale a prefix-less request should be sent to.
+It is framework-agnostic: it takes a plain `I18nRequest` and returns an `I18nRedirect` or
+`undefined`, and you adapt that to Next's `NextResponse.redirect` in your `middleware.ts`.
+
+## When to Use It
+
+Wire it into a Next `middleware.ts` matcher that excludes static assets and API routes. The docs app's
+own `proxy.ts` is a real example. Use `localeStaticParams` to pre-render every locale in
+`generateStaticParams`.
+
+## Usage
+
+```ts
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server'
+import { i18nMiddleware } from '@faang/i18n/next'
+import { runtime } from './i18n'
+
+const middleware = i18nMiddleware(runtime)
+
+export function middleware(request: NextRequest) {
+  const result = middleware({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    acceptLanguage: request.headers.get('accept-language') ?? undefined,
+    cookie: request.cookies.get('i18n_lng')?.value,
+  })
+  if (!result) return NextResponse.next()
+  const response = NextResponse.redirect(new URL(result.redirectTo, request.url))
+  if (result.setCookie) response.cookies.set('i18n_lng', result.locale)
+  return response
+}
+
+export const config = { matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'] }
+```
+
+## API
+
+### i18nMiddleware
+
+```ts
+function i18nMiddleware(
+  runtime: I18nRuntime,
+  options?: { cookieName?: string },
+): (request: I18nRequest) => I18nRedirect | undefined
+```
+
+| Member | Signature | Notes |
+|---|---|---|
+| `i18nMiddleware` | `(runtime, options?) => handler` | returns the request handler |
+| `localeStaticParams` | `(runtime) => { lng: string }[]` | one entry per configured locale |
+| `DEFAULT_COOKIE` | `'i18n_lng'` | default cookie name |
+
+### I18nRequest
+
+| Field | Type | Notes |
+|---|---|---|
+| `pathname` | `string` | required |
+| `search` | `string?` | includes the leading `?` |
+| `acceptLanguage` | `string?` | raw header value |
+| `cookie` | `string?` | raw cookie value |
+
+### I18nRedirect
+
+<AutoTypeTable path="../../packages/i18n/src/next/middleware.ts" name="I18nRedirect" />
+
+## Behavior and Edge Cases
+
+- If the first path segment already matches a configured locale (case-insensitively), the handler
+  returns `undefined` — a pass-through, so there is no redirect loop.
+- Otherwise it resolves the cookie first, then `Accept-Language` (first entry, before `;q=`), then the
+  default. All three go through `resolveLocale`, so hostile input falls back safely.
+- `setCookie` is `true` only when the incoming cookie was absent or invalid, so a valid cookie is not
+  rewritten on every visit.
+- The redirect target is `/${locale}${pathname}${search}`, and `locale` is always a member of the
+  configured list (never attacker-controlled).
+- `cookieName` only names the cookie in documentation terms; the handler reads whatever value you pass
+  in `request.cookie`. The adapter does not read cookies itself.
+
+## Failure Modes
+
+None; the handler is total and never throws. A malformed `pathname` (for example, no leading slash)
+still resolves: `split('/').filter(Boolean)` handles it.
+
+## Related
+
+- [Server Helpers](/packages/next/server)
+- [Vite Routing Helpers](/packages/vite/routes)
+- [Security and Failure Modes](/architecture/security-and-failure)

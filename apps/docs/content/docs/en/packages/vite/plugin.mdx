@@ -1,0 +1,85 @@
+---
+title: Vite Manifest Plugin
+description: i18nVitePlugin scans catalogs and emits a hashed i18n-manifest.json build asset.
+---
+
+## Purpose
+
+`i18nVitePlugin` in `packages/i18n/src/vite/plugin.ts` scans your catalog directory at build time and
+emits an `i18n-manifest.json` asset recording a content hash and byte size for every namespace of
+every locale. The manifest lets a runtime or CDN detect changed catalogs without reading them all.
+
+## When to Use It
+
+Add it to `plugins` in `vite.config.ts` for a Vite app that ships JSON catalogs. It is a build-time
+tool only; it does not affect the runtime loader, which still fetches the catalog files themselves.
+
+## Usage
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import { i18nVitePlugin } from '@faang/i18n/vite'
+
+export default defineConfig({
+  plugins: [
+    i18nVitePlugin({
+      catalogsDir: 'public/catalogs',
+      locales: ['en', 'ar'],
+    }),
+  ],
+})
+```
+
+With `public/catalogs/en/common.json` present, the build emits `i18n-manifest.json` containing, for
+example, `locales.en.common = { hash: 'a1b2c3d4e5f6', bytes: 812 }`.
+
+## API
+
+```ts
+function i18nVitePlugin(options: I18nVitePluginOptions): {
+  name: string
+  buildStart(): void
+  generateBundle(this: unknown): { fileName: string; source: string }[]
+}
+```
+
+### I18nVitePluginOptions
+
+<AutoTypeTable path="../../packages/i18n/src/vite/plugin.ts" name="I18nVitePluginOptions" />
+
+### I18nManifest
+
+<AutoTypeTable path="../../packages/i18n/src/vite/plugin.ts" name="I18nManifest" />
+
+## Parameters and Returns
+
+| Option | Type | Notes |
+|---|---|---|
+| `catalogsDir` | `string` | directory containing one subdirectory per locale |
+| `locales` | `readonly string[]` | locales to scan, in order |
+
+The plugin returns a Vite plugin object with `name: 'faang-i18n'`.
+
+## Behavior and Edge Cases
+
+- `buildStart` computes the manifest eagerly; `generateBundle` recomputes it only if it is still empty
+  (for example, when used outside a full build).
+- Only top-level `*.json` files directly inside each locale directory are scanned; nested directories
+  are ignored.
+- Each hash is the first 12 hex characters of a SHA-256 of the file bytes; `bytes` is
+  `source.byteLength` (bytes read from disk, not the UTF-16 string length).
+- The manifest is emitted through `this.emitFile` when the Rollup/Vite context provides it, and is
+  also returned from `generateBundle`. Returning and emitting the same asset is intentional: it makes
+  the plugin testable without a bundler context.
+
+## Failure Modes
+
+`readdirSync(dir)` throws if a locale directory does not exist. Ensure each locale in `locales` has a
+catalog directory before running the build.
+
+## Related
+
+- [Vite Routing Helpers](/packages/vite/routes)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [PersistentStore](/packages/loader/persistent) uses hashes for invalidation.

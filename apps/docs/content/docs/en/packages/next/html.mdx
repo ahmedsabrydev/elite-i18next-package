@@ -1,0 +1,72 @@
+---
+title: HTML Attributes
+description: getHtmlAttributes(lng) — the standalone lang/dir helper for the root html element.
+---
+
+## Purpose
+
+`getHtmlAttributes` in `packages/i18n/src/next/html.ts` returns the `{ lang, dir }` pair you spread
+onto Next's root `<html>` element. It is standalone — it does not need a runtime.
+
+## When to Use It
+
+Use it in the root layout (`app/[lang]/layout.tsx`) so the server sends `lang` and `dir` in the first
+byte, before any client JavaScript runs. This is what prevents a right-to-left flash.
+
+## Usage
+
+```tsx
+import { getHtmlAttributes } from '@faang/i18n/next'
+
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  return (
+    <html {...getHtmlAttributes(lang)}>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+## API
+
+```ts
+function getHtmlAttributes(lng: string): { lang: string; dir: Dir }
+```
+
+- `lang` is the input locale string, unchanged.
+- `dir` is `dirFor(lng)` from the kernel: `'rtl'` for Arabic, Hebrew, Farsi, and Urdu; `'ltr'`
+  otherwise.
+
+## Parameters and Returns
+
+| Parameter | Type | Notes |
+|---|---|---|
+| `lng` | `string` | any locale string; not validated here |
+
+Returns `{ lang, dir }`. `lang` is passed through verbatim, so if you supply `ar-EG` the attribute is
+`lang="ar-EG"` while `dir` uses the base `ar`.
+
+## Behavior and Edge Cases
+
+- Despite living in the Next entry point, the function has no Next dependency — you can reuse it in a
+  Vite SSR template.
+- It is distinct from `runtime.getHtmlAttributes`, which is the same computation bound to a runtime.
+  The runtime method exists for code that already holds a runtime; this one is for layouts that only
+  have a locale string.
+
+## Failure Modes
+
+No validation and no throwing: an unknown locale yields `dir="ltr"`.
+
+## Related
+
+- [Redirect Middleware](/packages/next/middleware)
+- [Locale Protocol](/packages/kernel/locale-protocol)
+- [Zero-Flicker Rendering](/architecture/zero-flicker)

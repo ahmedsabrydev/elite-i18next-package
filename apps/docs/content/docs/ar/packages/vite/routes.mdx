@@ -1,0 +1,64 @@
+---
+title: مساعدات توجيه Vite
+description: localePrefix وmatchLocaleFromPath وresolveLocaleOrNull للتوجيه المعتمد على البادئة.
+---
+
+## الغرض
+
+يوفّر `packages/i18n/src/vite/routes.ts` البدائيات الصغيرة الخالية من إطار العمل التي يحتاجها موجّه
+Vite: بناء مسار مُعرَّب، وتقسيم مسار إلى لغة وبقية، وقراءة لغة أو `null`.
+
+## متى تستخدمه
+
+استخدمها في موجّه تطبيق Vite أحادي الصفحة (React Router أو TanStack Router أو موجّه يدوي) لحسم اللغة
+من `window.location.pathname` ولبناء الروابط. وهي مفيدة أيضاً في الاختبارات وفي تطبيق `useLocale`
+مخصص.
+
+## الاستخدام
+
+```ts
+import { localePrefix, matchLocaleFromPath, resolveLocaleOrNull } from '@faang/i18n/vite'
+
+localePrefix('ar', 'docs') // '/ar/docs'
+localePrefix('ar', '/docs') // '/ar/docs'
+
+matchLocaleFromPath('/ar/docs', ['en', 'ar'], 'en') // { locale: 'ar', rest: '/docs' }
+matchLocaleFromPath('/docs', ['en', 'ar'], 'en') // { locale: 'en', rest: '/docs' }
+
+resolveLocaleOrNull('/ar/docs', ['en', 'ar']) // 'ar'
+resolveLocaleOrNull('/docs', ['en', 'ar']) // null
+```
+
+## واجهة البرمجة
+
+| التصدير | التوقيع | يُرجع |
+|---|---|---|
+| `localePrefix` | `(lng, pathname) => string` | مسار يبدأ حتماً بـ `/` |
+| `matchLocaleFromPath` | `(pathname, locales, defaultLocale) => { locale, rest }` | اللغة المحسومة وبقية المسار |
+| `resolveLocaleOrNull` | `(pathname, locales) => string \| null` | اللغة أو `null` |
+| `resolveLocale` | إعادة تصدير مساعد النواة | نص لغة مُتحقَّق منه |
+
+## المعاملات والمُرجَع
+
+`locales` قائمة لغات التطبيق المضبوطة. وتُرجع `matchLocaleFromPath` قيمة `defaultLocale` عندما لا
+يكون المقطع الأول لغة. و`rest` لا ينتهي أبداً بشرطة مائلة.
+
+## السلوك والحالات الحدّية
+
+- مطابقة المقاطع تصغّر الحروف وتحذف المنطقة، فيُحسم `/AR` و`/ar-EG/...` إلى `ar`.
+- تحسب `matchLocaleFromPath` قيمة `rest` كـ `"/" + segments.slice(2).join("/")` مع حذف الشرطات المائلة
+  الختامية. والمسار الذي يساوي اللغة تماماً (`/ar`) يُنتج `rest: '/'`.
+- تطابق `resolveLocaleOrNull` أول مقطع غير فارغ فقط؛ ولا تعتبر اللغة الغائبة افتراضية — وهذا عمل
+  `matchLocaleFromPath` عمداً.
+- تقبل `localePrefix` مساراً بشرطة مائلة بادئة أو بدونها وتُطبّعه إلى واحدة تماماً.
+- `resolveLocale` المُعاد تصديرها هي الدالة نفسها التي تستخدمها النواة، فالتحقق متطابق عبر المُهايئات.
+
+## أنماط الفشل
+
+لا شيء يرمي. والمسارات الفارغة أو المشوّهة ترجع إلى اللغة الافتراضية (أو `null`).
+
+## ذو صلة
+
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
+- [إضافة Vite للبيان](/packages/vite/plugin)
+- [وسيطة إعادة التوجيه](/packages/next/middleware)

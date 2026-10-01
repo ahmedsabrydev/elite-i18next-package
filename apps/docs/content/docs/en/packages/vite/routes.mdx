@@ -1,0 +1,65 @@
+---
+title: Vite Routing Helpers
+description: localePrefix, matchLocaleFromPath, and resolveLocaleOrNull for prefix-based routing.
+---
+
+## Purpose
+
+`packages/i18n/src/vite/routes.ts` provides the small, framework-free primitives a Vite router needs:
+build a localized path, split a pathname into a locale and the rest, and read a locale or `null`.
+
+## When to Use It
+
+Use these in a Vite SPA's router (React Router, TanStack Router, or a hand-rolled one) to resolve the
+locale from `window.location.pathname` and to build links. They are also handy in tests and in a custom
+`useLocale` implementation.
+
+## Usage
+
+```ts
+import { localePrefix, matchLocaleFromPath, resolveLocaleOrNull } from '@faang/i18n/vite'
+
+localePrefix('ar', 'docs') // '/ar/docs'
+localePrefix('ar', '/docs') // '/ar/docs'
+
+matchLocaleFromPath('/ar/docs', ['en', 'ar'], 'en') // { locale: 'ar', rest: '/docs' }
+matchLocaleFromPath('/docs', ['en', 'ar'], 'en') // { locale: 'en', rest: '/docs' }
+
+resolveLocaleOrNull('/ar/docs', ['en', 'ar']) // 'ar'
+resolveLocaleOrNull('/docs', ['en', 'ar']) // null
+```
+
+## API
+
+| Export | Signature | Returns |
+|---|---|---|
+| `localePrefix` | `(lng, pathname) => string` | a path guaranteed to start with `/` |
+| `matchLocaleFromPath` | `(pathname, locales, defaultLocale) => { locale, rest }` | the resolved locale and remaining path |
+| `resolveLocaleOrNull` | `(pathname, locales) => string \| null` | the locale or `null` |
+| `resolveLocale` | re-export of the kernel helper | validated locale string |
+
+## Parameters and Returns
+
+`locales` is the app's configured locale list. `defaultLocale` is returned by `matchLocaleFromPath`
+when the first segment is not a locale. `rest` never has a trailing slash.
+
+## Behavior and Edge Cases
+
+- Segment matching lowercases and strips the region, so `/AR` and `/ar-EG/...` both resolve to `ar`.
+- `matchLocaleFromPath` computes `rest` as `"/" + segments.slice(2).join("/")` with trailing slashes
+  trimmed. A path that is exactly the locale (`/ar`) yields `rest: '/'`.
+- `resolveLocaleOrNull` matches the first non-empty segment only; it does not treat a missing locale as
+  the default — that is deliberately `matchLocaleFromPath`'s job.
+- `localePrefix` accepts a path with or without a leading slash and normalizes to exactly one.
+- The re-exported `resolveLocale` is the same function the kernel uses, so validation is identical
+  across adapters.
+
+## Failure Modes
+
+None throw. Empty or malformed pathnames fall back to the default locale (or `null`).
+
+## Related
+
+- [Locale Protocol](/packages/kernel/locale-protocol)
+- [Vite Manifest Plugin](/packages/vite/plugin)
+- [Redirect Middleware](/packages/next/middleware)

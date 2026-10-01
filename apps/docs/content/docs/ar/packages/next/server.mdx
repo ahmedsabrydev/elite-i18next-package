@@ -1,0 +1,91 @@
+---
+title: مساعدات الخادم
+description: createI18nServer وdefineRouteI18n لتحميل مساحات الأسماء أثناء العرض من الخادم.
+---
+
+## الغرض
+
+يوفّر `packages/i18n/src/next/server.ts` المساعدين اللذين يستخدمهما مكوّن خادم Next للحصول على دالة
+`t` مربوطة بلغة محددة. وهما يجعلان ترتيب التحميل ثم الترجمة صريحاً على الخادم حيث لا يوجد
+`I18nProvider` بعد.
+
+## متى تستخدمه
+
+- `createI18nServer(runtime)` مرة واحدة للحصول على `getT` تستدعيها في مكوّنات الخادم ودوال البيانات
+  ومعالجات المسارات.
+- `defineRouteI18n({ runtime, ns })` في أعلى وحدة صفحة للإعلان عن مساحات الأسماء التي يحتاجها المسار
+  وكشف `load(lng)`.
+
+## الاستخدام
+
+```tsx
+// app/[lang]/page.tsx
+import { createI18nServer, defineRouteI18n } from '@faang/i18n/next'
+import { runtime } from '@/i18n'
+
+const server = createI18nServer(runtime)
+const route = defineRouteI18n({ runtime, ns: ['common', 'errors'] })
+
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  await route.load(lang)
+  const t = await server.getT(lang, 'common')
+  return <h1>{t('home.title')}</h1>
+}
+
+export async function generateStaticParams() {
+  return runtime.config.locales.map((lng) => ({ lang: lng }))
+}
+```
+
+## واجهة البرمجة
+
+### createI18nServer
+
+```ts
+function createI18nServer(runtime: I18nRuntime): {
+  getT: (lng: string, ns?: Namespace) => Promise<TFunction>
+}
+```
+
+تنتظر `getT` الدالة `runtime.loadNamespace(lng, ns)` ثم تُرجع `runtime.getT(lng, ns)`. و`ns` تأخذ
+افتراضياً `runtime.config.defaultNS`.
+
+### defineRouteI18n
+
+```ts
+function defineRouteI18n(options: {
+  runtime: I18nRuntime
+  ns: Namespace[]
+}): { ns: Namespace[]; load: (lng: string) => Promise<void> }
+```
+
+تنتظر `load` الدالة `Promise.all` على مساحات الأسماء المعلَنة.
+
+## المعاملات والمُرجَع
+
+| المساعد | المعامل | يُرجع |
+|---|---|---|
+| `createI18nServer` | `runtime` | `{ getT }` |
+| `defineRouteI18n` | `{ runtime, ns }` | `{ ns, load }` |
+
+## السلوك والحالات الحدّية
+
+- تنتظر `getT` التحميل دائماً، فلا يُصدر عرض الخادم مفتاحاً مفقوداً لمجرد أن مساحة الأسماء لم تُطلب
+  بعد.
+- تُحسم `loadNamespace` (لا تُرفض) عند الفشل، لذا قد تُرجع `getT` دالة `t` مربوطة بمساحة أسماء غير
+  محمّلة؛ فتصيّر اللغة الاحتياطية أو المفتاح.
+- الإعلان عن مساحات الأسماء عبر `defineRouteI18n` مساعد توثيقي بقدر ما هو تحسين: فمجموعة مساحات
+  الأسماء التي يلمسها المسار تصبح صريحة.
+- هذه المساعدات لكل زمن تشغيل. أنشئ غلاف الخادم مرة واحدة على مستوى الوحدة لا لكل طلب.
+
+## أنماط الفشل
+
+لا يرمي أيٌّ من المساعدين. ويمتص زمن التشغيل أخطاء التحميل؛ انظر
+[الأمان وأنماط الفشل](/architecture/security-and-failure).
+
+## ذو صلة
+
+- [وسيطة إعادة التوجيه](/packages/next/middleware)
+- [سمات HTML](/packages/next/html)
+- [TieredBackend](/packages/loader/backend)

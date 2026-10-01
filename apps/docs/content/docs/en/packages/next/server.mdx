@@ -1,0 +1,91 @@
+---
+title: Server Helpers
+description: createI18nServer and defineRouteI18n for loading namespaces during a server render.
+---
+
+## Purpose
+
+`packages/i18n/src/next/server.ts` provides the two helpers a Next server component uses to obtain a
+`t` function bound to a specific locale. They make the load-then-translate order explicit on the
+server, where no `I18nProvider` exists yet.
+
+## When to Use It
+
+- `createI18nServer(runtime)` once, to get a `getT` you can call in server components, metadata
+  functions, and route handlers.
+- `defineRouteI18n({ runtime, ns })` at the top of a page module to declare which namespaces that
+  route needs and expose a `load(lng)`.
+
+## Usage
+
+```tsx
+// app/[lang]/page.tsx
+import { createI18nServer, defineRouteI18n } from '@faang/i18n/next'
+import { runtime } from '@/i18n'
+
+const server = createI18nServer(runtime)
+const route = defineRouteI18n({ runtime, ns: ['common', 'errors'] })
+
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  await route.load(lang)
+  const t = await server.getT(lang, 'common')
+  return <h1>{t('home.title')}</h1>
+}
+
+export async function generateStaticParams() {
+  return runtime.config.locales.map((lng) => ({ lang: lng }))
+}
+```
+
+## API
+
+### createI18nServer
+
+```ts
+function createI18nServer(runtime: I18nRuntime): {
+  getT: (lng: string, ns?: Namespace) => Promise<TFunction>
+}
+```
+
+`getT` awaits `runtime.loadNamespace(lng, ns)` and then returns `runtime.getT(lng, ns)`. `ns` defaults
+to `runtime.config.defaultNS`.
+
+### defineRouteI18n
+
+```ts
+function defineRouteI18n(options: {
+  runtime: I18nRuntime
+  ns: Namespace[]
+}): { ns: Namespace[]; load: (lng: string) => Promise<void> }
+```
+
+`load` awaits `Promise.all` over the declared namespaces.
+
+## Parameters and Returns
+
+| Helper | Parameter | Returns |
+|---|---|---|
+| `createI18nServer` | `runtime` | `{ getT }` |
+| `defineRouteI18n` | `{ runtime, ns }` | `{ ns, load }` |
+
+## Behavior and Edge Cases
+
+- `getT` always awaits the load first, so a server render never emits a missing key just because the
+  namespace had not been requested yet.
+- `loadNamespace` resolves (never rejects) on failure, so `getT` may return a `t` bound to an
+  unloaded namespace; it then renders the fallback language or the key.
+- Declaring namespaces via `defineRouteI18n` is a documentation aid as much as an optimization: the
+  set of namespaces a route touches becomes explicit.
+- These helpers are per-runtime. Create the server wrapper once at module scope, not per request.
+
+## Failure Modes
+
+Neither helper throws. Load failures are absorbed by the runtime; see
+[Security and Failure Modes](/architecture/security-and-failure).
+
+## Related
+
+- [Redirect Middleware](/packages/next/middleware)
+- [HTML Attributes](/packages/next/html)
+- [TieredBackend](/packages/loader/backend)

@@ -1,0 +1,70 @@
+---
+title: سمات HTML
+description: getHtmlAttributes(lng) — مساعد lang/dir المستقل لعنصر html الجذري.
+---
+
+## الغرض
+
+يُرجع `getHtmlAttributes` في `packages/i18n/src/next/html.ts` الزوج `{ lang, dir }` الذي تنشره على
+عنصر `<html>` الجذري في Next. وهو مستقل — لا يحتاج زمن تشغيل.
+
+## متى تستخدمه
+
+استخدمه في التخطيط الجذري (`app/[lang]/layout.tsx`) كي يرسل الخادم `lang` و`dir` في البايت الأول
+قبل تشغيل أي JavaScript عميل. وهذا ما يمنع وميض الاتجاه من اليمين إلى اليسار.
+
+## الاستخدام
+
+```tsx
+import { getHtmlAttributes } from '@faang/i18n/next'
+
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  return (
+    <html {...getHtmlAttributes(lang)}>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+## واجهة البرمجة
+
+```ts
+function getHtmlAttributes(lng: string): { lang: string; dir: Dir }
+```
+
+- `lang` هو نص اللغة المُدخل دون تغيير.
+- `dir` هو `dirFor(lng)` من النواة: `'rtl'` للعربية والعبرية والفارسية والأردية، و`'ltr'` لما عداها.
+
+## المعاملات والمُرجَع
+
+| المعامل | النوع | ملاحظات |
+|---|---|---|
+| `lng` | `string` | أي نص لغة؛ لا يُتحقق منه هنا |
+
+يُرجع `{ lang, dir }`. وتُمرَّر `lang` كما هي، فإن زوّدت `ar-EG` صارت السمة `lang="ar-EG"` بينما
+يستخدم `dir` الأساس `ar`.
+
+## السلوك والحالات الحدّية
+
+- رغم وجودها في نقطة دخول Next، لا تعتمد الدالة على Next إطلاقاً — يمكنك إعادة استخدامها في قالب
+  Vite SSR.
+- وهي مختلفة عن `runtime.getHtmlAttributes` الذي يجري الحساب نفسه مربوطاً بزمن تشغيل. وتوجد طريقة زمن
+  التشغيل لشيفرة تحمل زمن تشغيل بالفعل؛ وهذه للتخطيطات التي لا تملك إلا نص اللغة.
+
+## أنماط الفشل
+
+لا تحقق ولا رمي: لغة مجهولة تُنتج `dir="ltr"`.
+
+## ذو صلة
+
+- [وسيطة إعادة التوجيه](/packages/next/middleware)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
+- [العرض دون وميض](/architecture/zero-flicker)

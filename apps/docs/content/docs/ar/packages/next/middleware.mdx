@@ -1,0 +1,95 @@
+---
+title: وسيطة إعادة التوجيه
+description: i18nMiddleware وlocaleStaticParams وDEFAULT_COOKIE وأشكال الطلب وإعادة التوجيه.
+---
+
+## الغرض
+
+يحدّد `packages/i18n/src/next/middleware.ts` اللغة التي يجب توجيه طلب بلا بادئة إليها. وهو مستقل عن
+إطار العمل: يستقبل `I18nRequest` عادياً ويُرجع `I18nRedirect` أو `undefined`، وأنت تُكيِّفه مع
+`NextResponse.redirect` في `middleware.ts`.
+
+## متى تستخدمه
+
+وصّله في `middleware.ts` لمطابق يستثني الملفات الساكنة ومسارات API. وملف `proxy.ts` في تطبيق
+التوثيق مثال حقيقي. واستخدم `localeStaticParams` لتصيير كل لغة مسبقاً في `generateStaticParams`.
+
+## الاستخدام
+
+```ts
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server'
+import { i18nMiddleware } from '@faang/i18n/next'
+import { runtime } from './i18n'
+
+const middleware = i18nMiddleware(runtime)
+
+export function middleware(request: NextRequest) {
+  const result = middleware({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    acceptLanguage: request.headers.get('accept-language') ?? undefined,
+    cookie: request.cookies.get('i18n_lng')?.value,
+  })
+  if (!result) return NextResponse.next()
+  const response = NextResponse.redirect(new URL(result.redirectTo, request.url))
+  if (result.setCookie) response.cookies.set('i18n_lng', result.locale)
+  return response
+}
+
+export const config = { matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'] }
+```
+
+## واجهة البرمجة
+
+### i18nMiddleware
+
+```ts
+function i18nMiddleware(
+  runtime: I18nRuntime,
+  options?: { cookieName?: string },
+): (request: I18nRequest) => I18nRedirect | undefined
+```
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `i18nMiddleware` | `(runtime, options?) => handler` | يُرجع معالج الطلب |
+| `localeStaticParams` | `(runtime) => { lng: string }[]` | مدخل لكل لغة مضبوطة |
+| `DEFAULT_COOKIE` | `'i18n_lng'` | اسم الكوكي الافتراضي |
+
+### I18nRequest
+
+| الحقل | النوع | ملاحظات |
+|---|---|---|
+| `pathname` | `string` | مطلوب |
+| `search` | `string?` | يشمل `?` البادئة |
+| `acceptLanguage` | `string?` | قيمة الترويسة الخام |
+| `cookie` | `string?` | قيمة الكوكي الخام |
+
+### I18nRedirect
+
+<AutoTypeTable path="../../packages/i18n/src/next/middleware.ts" name="I18nRedirect" />
+
+## السلوك والحالات الحدّية
+
+- إذا طابق أول مقطع مسار لغةً مضبوطة (بلا حساسية للحالة) يُرجع المعالج `undefined` — مرور مباشر، فلا
+  حلقة إعادة توجيه.
+- وإلا يحسم الكوكي أولاً، ثم `Accept-Language` (أول مدخل قبل `;q=`)، ثم الافتراضية. وتمرّ الثلاثة عبر
+  `resolveLocale`، فيسقط الإدخال الخبيث آمناً.
+- تكون `setCookie` صحيحة فقط عندما كان الكوكي الوارد غائباً أو غير صالح، فلا يُعاد كتابة كوكي صالح في
+  كل زيارة.
+- هدف إعادة التوجيه `/${locale}${pathname}${search}`، و`locale` عضو دائماً في القائمة المضبوطة (لا
+  يتحكم به المهاجم).
+- `cookieName` يسمّي الكوكي من ناحية التوثيق فقط؛ فالمعالج يقرأ أي قيمة تمرّرها في `request.cookie`.
+  ولا يقرأ المُهايئ الكوكيز بنفسه.
+
+## أنماط الفشل
+
+لا شيء؛ المعالج كلي ولا يرمي. وحتى `pathname` مشوّه (مثلاً بلا شرطة مائلة) يُحسم: فـ
+`split('/').filter(Boolean)` يعالجه.
+
+## ذو صلة
+
+- [مساعدات الخادم](/packages/next/server)
+- [مساعدات توجيه Vite](/packages/vite/routes)
+- [الأمان وأنماط الفشل](/architecture/security-and-failure)
