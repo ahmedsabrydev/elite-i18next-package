@@ -1,0 +1,72 @@
+---
+title: Trans
+description: غلاف المكوّن لإدراج JSX في الترجمات، مع دالة t مربوطة.
+---
+
+## الغرض
+
+`Trans` في `packages/i18n/src/react/trans.tsx` يعيد تصدير `Trans` من react-i18next لكنه يحقن `t`
+مربوطة باللغة الفعّالة. ويتيح لترجمة أن تحتوي ترميزاً (روابط، تشديداً، تنسيقاً) عبر ربط عناصر
+`<n>` بعُقد React.
+
+## متى تستخدمه
+
+استخدم `Trans` بدل `useT` عندما يجب أن يحتوي النص المترجم JSX. أما للنص العادي مع متغيرات فـ
+`t('key', { name })` أبسط وأأمن (تُهرَّب القيم لأن `interpolation.escapeValue` تساوي `true`).
+
+## الاستخدام
+
+```tsx
+import { Trans } from '@faang/i18n/react'
+
+function Signup() {
+  return (
+    <Trans
+      ns="auth"
+      i18nKey="signup.terms"
+      components={{ link: <a href="/terms" /> }}
+    />
+  )
+}
+```
+
+ومع مدخل كتالوج مثل `"signup.terms": "By continuing you accept the <link>terms</link>."` يُصيَّر
+الابن `<link>` كعقدة React التي زوّدتها.
+
+## واجهة البرمجة
+
+```tsx
+function Trans(props: ComponentProps<typeof ReactI18nTrans>): JSX.Element
+```
+
+يمرّر كل الخصائص إلى `Trans` من react-i18next. والإضافة الوحيدة هي الخاصية `t`: إن لم تمرّر واحدة
+استخدم نتيجة `useT(props.ns)`.
+
+## المعاملات والمُرجَع
+
+| الخاصية | ملاحظات |
+|---|---|
+| `ns` | مساحة الأسماء للتحميل والترجمة منها؛ تُمرَّر إلى `useT` |
+| `i18nKey` | مفتاح الكتالوج |
+| `components` | خريطة اسم العنصر البديل إلى عقدة React |
+| `values` | قيم الإدراج العادية |
+| `t` | تجاوز اختياري؛ وإلا الدالة `t` المربوطة بالسياق |
+
+## السلوك والحالات الحدّية
+
+- `props.t ?? t` يعني أن أي `t` مُمرَّرة صراحةً تفوز دائماً؛ وهذا يحفظ التوافق مع شيفرة تزوّد واحدة
+  بالفعل.
+- لأنه يستدعي `useT` فإن `Trans` مستهلك لخطاف عميل ويجب أن يعيش تحت `I18nProvider`.
+- لا يُعقَّم HTML المضمّن في نص الكتالوج؛ فـ `Trans` هو المخرج المقصود للترميز. لا تستخدمه أبداً مع
+  محتوى كتالوج غير موثوق.
+
+## أنماط الفشل
+
+خارج `I18nProvider` يرمي `useT`. والمفتاح المفقود بلا احتياطي يُصيّر المفتاح نفسه (i18next بخيار
+`returnNull: false`).
+
+## ذو صلة
+
+- [الخطافات](/packages/react/hooks)
+- [الأمان وأنماط الفشل](/architecture/security-and-failure)
+- [نموذج بيانات i18next](/architecture/i18next-model)

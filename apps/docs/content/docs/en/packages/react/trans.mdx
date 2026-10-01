@@ -1,0 +1,73 @@
+---
+title: Trans
+description: The component wrapper for interpolating JSX into translations, with a bound t function.
+---
+
+## Purpose
+
+`Trans` in `packages/i18n/src/react/trans.tsx` re-exports react-i18next's `Trans` but injects a `t`
+bound to the active locale. It lets a translation contain markup (links, emphasis, formatting) by
+mapping `<n>` placeholders to React nodes.
+
+## When to Use It
+
+Use `Trans` instead of `useT` when the translated string must contain JSX. For plain text with
+variables, `t('key', { name })` is simpler and safer (values are escaped, since
+`interpolation.escapeValue` is `true`).
+
+## Usage
+
+```tsx
+import { Trans } from '@faang/i18n/react'
+
+function Signup() {
+  return (
+    <Trans
+      ns="auth"
+      i18nKey="signup.terms"
+      components={{ link: <a href="/terms" /> }}
+    />
+  )
+}
+```
+
+With a catalog entry such as `"signup.terms": "By continuing you accept the <link>terms</link>."`,
+the `<link>` child is rendered as the React node you supplied.
+
+## API
+
+```tsx
+function Trans(props: ComponentProps<typeof ReactI18nTrans>): JSX.Element
+```
+
+It forwards every prop to react-i18next's `Trans`. The only addition is the `t` prop: if you did not
+pass one, it uses the result of `useT(props.ns)`.
+
+## Parameters and Returns
+
+| Prop | Notes |
+|---|---|
+| `ns` | namespace to load and translate from; passed to `useT` |
+| `i18nKey` | the catalog key |
+| `components` | map of placeholder name to React node |
+| `values` | plain interpolation values |
+| `t` | optional override; otherwise the context-bound `t` |
+
+## Behavior and Edge Cases
+
+- `props.t ?? t` means an explicitly passed `t` always wins; this keeps compatibility with code that
+  already supplies one.
+- Because it calls `useT`, `Trans` is a client hook consumer and must live under `I18nProvider`.
+- HTML embedded in a catalog string is not sanitized; `Trans` is the deliberate escape hatch for
+  markup. Never use it with untrusted catalog content.
+
+## Failure Modes
+
+Outside `I18nProvider`, `useT` throws. A missing key with no fallback renders the key (i18next
+`returnNull: false`).
+
+## Related
+
+- [Hooks](/packages/react/hooks)
+- [Security and Failure Modes](/architecture/security-and-failure)
+- [i18next Data Model](/architecture/i18next-model)

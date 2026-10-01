@@ -1,0 +1,79 @@
+---
+title: I18nProvider
+description: الحدّ العميل الذي يعرض زمن التشغيل ولقطة اللغة ونسخة i18next لـ React.
+---
+
+## الغرض
+
+`I18nProvider` في `packages/i18n/src/react/provider.tsx` هو الجسر بين زمن التشغيل الخالي من إطار
+العمل وReact. يحسب `LocaleSnapshot` وينشره عبر `I18nContext` ويُداخل `I18nextProvider` من
+react-i18next كي يُحسم `useTranslation` و`<Trans>` إلى النسخة نفسها.
+
+## متى تستخدمه
+
+ركّب مُزوّداً واحداً قرب جذر شجرة React، داخل أي موجّه لغة (تخطيط Next App Router أو مسار Vite).
+ويجب أن يكون واحداً فقط لكل شجرة؛ فترمي الخطافات عند غيابه. ويُغلَّف في مُهايئ Next عبر
+`createI18nServer`، وفي تطبيق Vite أحادي الصفحة تركّبه بنفسك.
+
+## الاستخدام
+
+```tsx
+import { createI18n } from '@faang/i18n'
+import { I18nProvider } from '@faang/i18n/react'
+
+const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+
+export function Root({ locale }: { locale: string }) {
+  return (
+    <I18nProvider runtime={runtime} locale={locale} navigate={(href) => router.push(href)}>
+      <App />
+    </I18nProvider>
+  )
+}
+```
+
+## واجهة البرمجة
+
+```tsx
+function I18nProvider(props: I18nProviderProps): JSX.Element
+```
+
+### I18nProviderProps
+
+| الخاصية | النوع | مطلوب | ملاحظات |
+|---|---|---|---|
+| `runtime` | `I18nRuntime` | نعم | النسخة المشتركة التي أنشأتها |
+| `locale` | `string` | نعم | اللغة الفعّالة لهذا العرض |
+| `navigate` | `(href: string) => void` | لا | دالة الموجّه التي يستخدمها `changeLocale` |
+| `children` | `ReactNode` | نعم | الشجرة الفرعية |
+
+## المعاملات والمُرجَع
+
+يُصيّر زوج مُزوّدات ويُرجع الشجرة الفرعية ملفوفة في `I18nContext.Provider` و`I18nextProvider` من
+react-i18next.
+
+## السلوك والحالات الحدّية
+
+- يُخزَّن `snapshot` مؤقتاً على `[locale, runtime]`. وقيمة `status` تكون `'hydrated'` عندما يكون
+  `runtime.has(locale, runtime.config.defaultNS)` صحيحاً، وإلا `'loading-ns'`.
+- يُشتق `dir` و`isRtl` كلاهما من `dirFor(locale)`؛ و`isRtl` مجرد `dir === 'rtl'`.
+- تُخزَّن قيمة السياق مؤقتاً على `[runtime, locale, snapshot, navigate]`، فالدالة `navigate` الثابتة
+  تحفظ التساوي المرجعي بين العروض.
+- `navigate` اختيارية. وعند غيابها يلجأ `changeLocale` إلى `window.location.assign`.
+- لا يُعاد حساب اللقطة عند اكتمال تحميل مساحة أسماء إلا إذا أعاد الأب العرض بقيمة جديدة؛ فهي مرآة
+  وقت العرض لا اشتراك.
+
+## أنماط الفشل
+
+استهلاك `useI18nRuntime` أو `useT` أو `useLocale` خارج المُزوّد يرمي
+`useLocale must be used within an <I18nProvider>`. أما المُزوّد نفسه فلا يرمي.
+
+## ذو صلة
+
+- [الخطافات](/packages/react/hooks)
+- [السياق وLocaleSnapshot](/packages/react/context)
+- [Trans](/packages/react/trans)

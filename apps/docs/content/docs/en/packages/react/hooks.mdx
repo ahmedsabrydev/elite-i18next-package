@@ -1,0 +1,90 @@
+---
+title: Hooks
+description: useT, useLocale, and useI18nRuntime, including changeLocale's prefix rewrite.
+---
+
+## Purpose
+
+`packages/i18n/src/react/hooks.ts` exports the three hooks applications use to read localized
+content and switch locale. They read from `I18nContext`, so they only work under `I18nProvider`.
+
+## When to Use It
+
+- `useT(ns?)` to translate. Pass the namespace you are rendering so the loader knows what to fetch.
+- `useLocale()` to read `{ lng, dir, isRtl, status }` and to call `changeLocale`.
+- `useI18nRuntime()` when you need the raw runtime (for example, to prefetch a namespace).
+
+## Usage
+
+```tsx
+import { useT, useLocale, useI18nRuntime } from '@faang/i18n/react'
+
+function Greeting() {
+  const t = useT('common')
+  const { lng, dir, isRtl, status, changeLocale } = useLocale()
+  const runtime = useI18nRuntime()
+
+  return (
+    <p dir={dir}>
+      {t('greeting', { defaultValue: 'Hello' })}
+      <button onClick={() => changeLocale(lng === 'en' ? 'ar' : 'en')}>
+        {status === 'loading-ns' ? '…' : lng}
+      </button>
+    </p>
+  )
+}
+```
+
+## API
+
+| Hook | Signature | Returns |
+|---|---|---|
+| `useT` | `(ns?: Namespace) => TFunction` | a react-i18next `t`, bound to the active locale |
+| `useLocale` | `() => LocaleSnapshot & { changeLocale: (lng: string) => void }` | the snapshot plus a switcher |
+| `useI18nRuntime` | `() => I18nRuntime` | the runtime from context |
+
+### LocaleSnapshot
+
+<AutoTypeTable path="../../packages/i18n/src/react/context.ts" name="LocaleSnapshot" />
+
+## changeLocale Semantics
+
+`changeLocale(lng)` rewrites the URL and never mutates the store directly:
+
+1. It returns early when `typeof window === 'undefined'` (SSR-safe no-op).
+2. It reads `pathname`, `search`, and `hash` from `window.location`.
+3. It builds a regex from `runtime.config.locales` (each escaped) and replaces the current leading
+   `/<locale>` prefix with `/<lng>`.
+4. If no prefix matched, it prepends `/<lng>` to the pathname.
+5. It appends the original `search` and `hash`.
+6. It calls `navigate(href)` if provided, otherwise `window.location.assign(href)`.
+
+```ts
+// current /en/docs?q=x#top, locales ['en','ar'], changeLocale('ar')
+// → /ar/docs?q=x#top
+```
+
+## Parameters and Returns
+
+`useT(ns)` passes `{ lng: locale }` to react-i18next's `useTranslation`. `changeLocale` is memoized on
+`[navigate, runtime]`.
+
+## Behavior and Edge Cases
+
+- The prefix regex is anchored (`^/`) and requires a following `/` or end-of-string, so a path like
+  `/english-thing` is not mistaken for `en`.
+- Locale values are escaped before being placed in the regex, so a future locale with a regex
+  metacharacter is safe.
+- Because `changeLocale` navigates rather than setting state, the server-rendered HTML for the new
+  locale is what renders. Strings never cross locales in memory.
+
+## Failure Modes
+
+If `navigate` is undefined **and** `window` is defined, the hook falls back to a full-page navigation.
+Calling any hook outside `I18nProvider` throws.
+
+## Related
+
+- [I18nProvider](/packages/react/provider)
+- [Locale Protocol](/packages/kernel/locale-protocol)
+- [Context and LocaleSnapshot](/packages/react/context)

@@ -1,0 +1,78 @@
+---
+title: Context and LocaleSnapshot
+description: The React context shape and the minimal locale mirror — and why translated strings never enter it.
+---
+
+## Purpose
+
+`packages/i18n/src/react/context.ts` declares the React context and the two types it carries. It is
+deliberately tiny: the context is a read-only mirror of locale metadata, not a store of translated
+strings.
+
+## When to Use It
+
+Consume it through the hooks. Import the types when you write a component that receives a snapshot as
+a prop, or when you build an alternative provider.
+
+## Exports
+
+| Export | Kind | Meaning |
+|---|---|---|
+| `I18nContext` | context | `I18nContextValue \| null`, defaults to `null` |
+| `I18nContextValue` | type | what the provider publishes |
+| `LocaleSnapshot` | type | the render-time locale mirror |
+
+### LocaleSnapshot
+
+<AutoTypeTable path="../../packages/i18n/src/react/context.ts" name="LocaleSnapshot" />
+
+### I18nContextValue
+
+| Field | Type | Notes |
+|---|---|---|
+| `runtime` | `I18nRuntime` | the shared runtime |
+| `locale` | `string` | the active locale |
+| `snapshot` | `LocaleSnapshot` | derived metadata |
+| `navigate` | `(href: string) => void \| undefined` | optional router bridge |
+
+## Usage
+
+```tsx
+import { useContext } from 'react'
+import { I18nContext } from '@faang/i18n/react'
+
+const ctx = useContext(I18nContext)
+if (ctx) ctx.snapshot.dir
+```
+
+## Why Strings Live Elsewhere
+
+Translated content is owned by i18next, not by this context. Copying strings into React state would
+duplicate the cache, break i18next's interpolation and plural rules, and risk stale text after a
+locale switch. The context carries only what React needs to lay out correctly:
+
+- `lng` — for keys, links, and `lang` attributes,
+- `dir` — CSS direction,
+- `isRtl` — a convenience boolean,
+- `status` — whether the default namespace is available yet.
+
+The actual strings are read by `useT`, which is backed by the i18next instance.
+
+## Behavior and Edge Cases
+
+- `I18nContext` defaults to `null`; the hooks treat `null` as "provider missing" and throw.
+- `status` has three possible values (`'hydrated' | 'switching' | 'loading-ns'`), but the provider
+  currently only computes `'hydrated'` or `'loading-ns'`; `'switching'` is part of the public type for
+  adapters that track transitions.
+- The snapshot is recreated whenever `[locale, runtime]` change; it is not a live subscription.
+
+## Failure Modes
+
+Reading the context directly yields `null` outside a provider, which is a valid, non-throwing result.
+The throwing behavior is intentionally confined to the hooks.
+
+## Related
+
+- [I18nProvider](/packages/react/provider)
+- [Hooks](/packages/react/hooks)
+- [Store Adapters](/packages/store/zustand)

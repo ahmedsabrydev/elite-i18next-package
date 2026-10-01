@@ -1,0 +1,89 @@
+---
+title: الخطافات
+description: useT وuseLocale وuseI18nRuntime، مع إعادة كتابة بادئة changeLocale.
+---
+
+## الغرض
+
+يُصدّر `packages/i18n/src/react/hooks.ts` الخطافات الثلاثة التي تستخدمها التطبيقات لقراءة المحتوى
+المترجم وتبديل اللغة. وتقرأ من `I18nContext`، لذا لا تعمل إلا تحت `I18nProvider`.
+
+## متى تستخدمه
+
+- `useT(ns?)` للترجمة. مرّر مساحة الأسماء التي تُصيّرها كي يعرف المُحمّل ما يجلب.
+- `useLocale()` لقراءة `{ lng, dir, isRtl, status }` وللاستدعاء `changeLocale`.
+- `useI18nRuntime()` عندما تحتاج زمن التشغيل الخام (مثلاً للجلب المسبق لمساحة أسماء).
+
+## الاستخدام
+
+```tsx
+import { useT, useLocale, useI18nRuntime } from '@faang/i18n/react'
+
+function Greeting() {
+  const t = useT('common')
+  const { lng, dir, isRtl, status, changeLocale } = useLocale()
+  const runtime = useI18nRuntime()
+
+  return (
+    <p dir={dir}>
+      {t('greeting', { defaultValue: 'Hello' })}
+      <button onClick={() => changeLocale(lng === 'en' ? 'ar' : 'en')}>
+        {status === 'loading-ns' ? '…' : lng}
+      </button>
+    </p>
+  )
+}
+```
+
+## واجهة البرمجة
+
+| الخطاف | التوقيع | يُرجع |
+|---|---|---|
+| `useT` | `(ns?: Namespace) => TFunction` | دالة `t` من react-i18next مربوطة باللغة الفعّالة |
+| `useLocale` | `() => LocaleSnapshot & { changeLocale: (lng: string) => void }` | اللقطة مع مُبدّل |
+| `useI18nRuntime` | `() => I18nRuntime` | زمن التشغيل من السياق |
+
+### LocaleSnapshot
+
+<AutoTypeTable path="../../packages/i18n/src/react/context.ts" name="LocaleSnapshot" />
+
+## دلالات changeLocale
+
+تكتب `changeLocale(lng)` المسار من جديد ولا تعدّل المخزن مباشرة أبداً:
+
+1. ترجع باكراً عندما يكون `typeof window === 'undefined'` (لا أثر أثناء العرض من الخادم).
+2. تقرأ `pathname` و`search` و`hash` من `window.location`.
+3. تبني نمطاً من `runtime.config.locales` (كلٌّ مُهرَّب) وتستبدل البادئة الحالية `/<locale>` بـ
+   `/<lng>`.
+4. وإذا لم تتطابق بادئة، تُضيف `/<lng>` إلى مقدمة المسار.
+5. تُلحق `search` و`hash` الأصليين.
+6. تستدعي `navigate(href)` إن وُجدت، وإلا `window.location.assign(href)`.
+
+```ts
+// الحالي /en/docs?q=x#top واللغات ['en','ar'] وchangeLocale('ar')
+// → /ar/docs?q=x#top
+```
+
+## المعاملات والمُرجَع
+
+تمرّر `useT(ns)` القيمة `{ lng: locale }` إلى `useTranslation` من react-i18next. و`changeLocale`
+مُخزَّنة مؤقتاً على `[navigate, runtime]`.
+
+## السلوك والحالات الحدّية
+
+- نمط البادئة مُثبَّت (`^/`) ويشترط `/` تالياً أو نهاية النص، فلا يُخطئ في `/english-thing` على أنها
+  `en`.
+- تُهرَّب قيم اللغات قبل إدراجها في النمط، فتصبح لغة مستقبلية تحتوي محرف نمط آمنة.
+- لأن `changeLocale` تُوجّه بدل ضبط الحالة، فإن HTML المُصيَّر من الخادم للغة الجديدة هو ما يُعرض. ولا
+  تعبر النصوص بين اللغات في الذاكرة.
+
+## أنماط الفشل
+
+إذا كانت `navigate` غير معرّفة **و** كان `window` معرّفاً، يلجأ الخطاف إلى توجيه كامل للصفحة.
+واستدعاء أي خطاف خارج `I18nProvider` يرمي.
+
+## ذو صلة
+
+- [I18nProvider](/packages/react/provider)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
+- [السياق وLocaleSnapshot](/packages/react/context)

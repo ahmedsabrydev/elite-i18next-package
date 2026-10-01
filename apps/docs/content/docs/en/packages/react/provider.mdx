@@ -1,0 +1,79 @@
+---
+title: I18nProvider
+description: The client boundary that exposes a runtime, its locale snapshot, and the i18next instance to React.
+---
+
+## Purpose
+
+`I18nProvider` in `packages/i18n/src/react/provider.tsx` is the bridge between the framework-free
+runtime and React. It computes the `LocaleSnapshot`, publishes it through `I18nContext`, and nests the
+react-i18next `I18nextProvider` so `useTranslation` and `<Trans>` resolve to the same instance.
+
+## When to Use It
+
+Mount one provider near the root of your React tree, inside any locale router (Next App Router layout
+or a Vite route). There must be exactly one per tree; hooks throw when it is missing. In the Next
+adapter this is wrapped by `createI18nServer`; in a Vite SPA you mount it yourself.
+
+## Usage
+
+```tsx
+import { createI18n } from '@faang/i18n'
+import { I18nProvider } from '@faang/i18n/react'
+
+const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+
+export function Root({ locale }: { locale: string }) {
+  return (
+    <I18nProvider runtime={runtime} locale={locale} navigate={(href) => router.push(href)}>
+      <App />
+    </I18nProvider>
+  )
+}
+```
+
+## API
+
+```tsx
+function I18nProvider(props: I18nProviderProps): JSX.Element
+```
+
+### I18nProviderProps
+
+| Prop | Type | Required | Notes |
+|---|---|---|---|
+| `runtime` | `I18nRuntime` | yes | shared instance you constructed |
+| `locale` | `string` | yes | the active locale for this render |
+| `navigate` | `(href: string) => void` | no | router callback used by `changeLocale` |
+| `children` | `ReactNode` | yes | subtree |
+
+## Parameters and Returns
+
+Renders a provider pair and returns the subtree wrapped in `I18nContext.Provider` and react-i18next's
+`I18nextProvider`.
+
+## Behavior and Edge Cases
+
+- `snapshot` is memoized on `[locale, runtime]`. Its `status` is `'hydrated'` when
+  `runtime.has(locale, runtime.config.defaultNS)` is true, otherwise `'loading-ns'`.
+- `dir` and `isRtl` are both derived from `dirFor(locale)`; `isRtl` is simply `dir === 'rtl'`.
+- The context value is memoized on `[runtime, locale, snapshot, navigate]`, so a stable `navigate`
+  keeps referential equality across renders.
+- `navigate` is optional. When absent, `changeLocale` falls back to `window.location.assign`.
+- The snapshot does not recompute when a namespace finishes loading unless the parent re-renders with
+  a new value; it is a render-time mirror, not a subscription.
+
+## Failure Modes
+
+Consuming `useI18nRuntime`, `useT`, or `useLocale` outside the provider throws
+`useLocale must be used within an <I18nProvider>`. The provider itself does not throw.
+
+## Related
+
+- [Hooks](/packages/react/hooks)
+- [Context and LocaleSnapshot](/packages/react/context)
+- [Trans](/packages/react/trans)
