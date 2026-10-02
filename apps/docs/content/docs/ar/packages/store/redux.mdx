@@ -1,0 +1,80 @@
+---
+title: متجر Redux
+description: localeSlice وإجراءاته ومحدداته للتطبيقات التي تُبقي اللغة في Redux Toolkit.
+---
+
+## الغرض
+
+يوفّر `packages/i18n/src/store/redux.ts` شريحة Redux Toolkit اختيارية للتطبيقات التي تدير حالتها بـ
+RTK. ومثل مُهايئ Zustand، يعكس `{ lng, dir, isRtl, status }` ولا يملك النصوص المترجمة.
+
+## متى تستخدمه
+
+سجّل `localeSlice.reducer` تحت المفتاح `locale` عندما يكون متجرك مركزياً في حالة تطبيقك. وتحصل على
+الإجراءين `localeChanged` و`localeStatusChanged` ومحددين.
+
+## الاستخدام
+
+```ts
+import { configureStore } from '@reduxjs/toolkit'
+import {
+  localeSlice,
+  localeChanged,
+  localeStatusChanged,
+  selectLocale,
+  selectDir,
+} from '@faang/i18n/redux'
+
+export const store = configureStore({ reducer: { locale: localeSlice.reducer } })
+
+store.dispatch(localeChanged('ar'))
+selectDir(store.getState()) // 'rtl'
+store.dispatch(localeStatusChanged('loading-ns'))
+```
+
+## واجهة البرمجة
+
+### localeSlice
+
+```ts
+const localeSlice: Slice<LocaleState, { localeChanged; localeStatusChanged }, 'locale'>
+```
+
+| التصدير | النوع | ملاحظات |
+|---|---|---|
+| `localeSlice` | شريحة | الاسم `'locale'`؛ ويُسجَّل المُخفِّض تحت `locale` |
+| `localeChanged` | مُنشئ إجراء | `PayloadAction<string>` |
+| `localeStatusChanged` | مُنشئ إجراء | `PayloadAction<LocaleState['status']>` |
+| `selectLocale` | محدد | `(state) => state.locale` |
+| `selectDir` | محدد | `(state) => state.locale.dir` |
+
+### LocaleState
+
+<AutoTypeTable path="../../packages/i18n/src/store/redux.ts" name="LocaleState" />
+
+الحالة الابتدائية `{ lng: 'en', dir: 'ltr', isRtl: false, status: 'hydrated' }`.
+
+## المعاملات والمُرجَع
+
+تضبط `localeChanged(lng)` الحقل `lng` وتعيد حساب `dir` عبر `dirFor` وتشتق `isRtl`. وتضبط
+`localeStatusChanged(status)` الحقل `status`. وتقرأ المحددات من متجر يحمل المفتاح `locale` قيمة
+`LocaleState`.
+
+## السلوك والحالات الحدّية
+
+- يتيح Immer (في RTK) للمُخفِّض تعديل `state` مباشرةً؛ وتحدّث الشريحة `dir` في الإجراء نفسه فلا توجد
+  حالة متوسطة غير متسقة.
+- اللغة الابتدائية مثبَّتة على `'en'`. وإن دعمت افتراضية مختلفة وأردت بدء الشريحة بها فوزّع
+  `localeChanged` بعد إعداد المتجر أو مرّر `preloadedState` مخصصاً.
+- تفترض المحددات تركيب الشريحة تحت المفتاح `locale`؛ فإن أعدت تسميته وجب كتابة محدداتك.
+- `LocaleState` مطابق بنيوياً لـ `LocaleSnapshot` في React لكنه مستقل، فاستيراده لا يحمّل React.
+
+## أنماط الفشل
+
+لا يرمي أي مُخفِّض. ونص لغة مجهول يُنتج `dir: 'ltr'` و`isRtl: false`.
+
+## ذو صلة
+
+- [متجر Zustand](/packages/store/zustand)
+- [السياق وLocaleSnapshot](/packages/react/context)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)

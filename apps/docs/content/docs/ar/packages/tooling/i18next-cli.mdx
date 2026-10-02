@@ -1,0 +1,96 @@
+---
+title: i18next-cli والسكربتات
+description: الواجهة المثبَّتة وأوامرها الأربعة وإعداد المستودع وخط تحقّق الجذر.
+---
+
+## الغرض
+
+تثبّت الحزمة واجهة سطر أوامر واحدة هي `i18next-cli` كأداة استخراج وتوليد أنواع. وتسجّل الثوابت في
+`packages/i18n/src/cli/index.ts` اسم الحزمة وإصدارها والأوامر المدعومة؛ ويلفّها `package.json` في
+الجذر كسكربتات `pnpm i18n:*`.
+
+## الثوابت
+
+```ts
+// packages/i18n/src/cli/index.ts
+export const CLI_PACKAGE = 'i18next-cli'
+export const CLI_VERSION = '1.73.2'
+export const CLI_COMMANDS = ['extract', 'types', 'status', 'lint'] as const
+```
+
+## الأوامر
+
+| الأمر | السكربت | الغرض |
+|---|---|---|
+| `extract` | `pnpm i18n:extract` | يفحص المصادر عن مفاتيح `t()`/`useT` ويكتب JSON الكتالوجات |
+| `types` | `pnpm i18n:types` | يعيد توليد `packages/i18n/src/@types/*` للمفاتيح المُنمَّطة |
+| `status` | `pnpm i18n:status` | يبلّغ عن المفاتيح الناقصة/الزائدة لكل لغة |
+| `lint` | `pnpm i18n:lint` | يفشل عند مشكلات الكتالوج |
+
+ويدعم `extract` تشغيلاً جافاً آمناً لـ CI:
+
+```bash
+pnpm i18n:extract --ci --dry-run
+```
+
+## الإعداد
+
+يقود `i18next.config.ts` في جذر المستودع الواجهة:
+
+```ts
+import { defineConfig } from 'i18next-cli'
+
+export default defineConfig({
+  locales: ['en', 'ar'],
+  extract: {
+    input: ['packages/i18n/src/**/*.{ts,tsx}', 'apps/*/src/**/*.{ts,tsx}'],
+    ignore: ['**/__tests__/**', '**/*.test.{ts,tsx}', '**/*.test-d.ts', 'apps/docs/**'],
+    useTranslationNames: ['useTranslation', 'useT'],
+    output: 'packages/i18n/catalogs/{{language}}/{{namespace}}.json',
+    defaultNS: 'common',
+    keySeparator: '.',
+    nsSeparator: ':',
+    removeUnusedKeys: false,
+  },
+  types: { output: 'packages/i18n/src/@types/i18next.d.ts' },
+})
+```
+
+| الإعداد | القيمة | لماذا يهم |
+|---|---|---|
+| `locales` | `['en', 'ar']` | يكتب الاستخراج شجرتي الكتالوجات |
+| `input` | مصادر الحزمة والتطبيقات التعاقدية | تُستخرج نصوص التطبيقات أيضاً |
+| `ignore` | الاختبارات و`apps/docs/**` | تطبيق التوثيق لا يستخدم `@faang/i18n` |
+| `useTranslationNames` | `useTranslation` و`useT` | يتعرّف على الخطاف الغلافي |
+| `output` | `catalogs/{{language}}/{{namespace}}.json` | ملف لكل لغة ومساحة أسماء |
+| `removeUnusedKeys` | `false` | لا تُحذف المفاتيح إلا عمداً |
+
+## الاستخدام
+
+```bash
+pnpm i18n:extract
+pnpm i18n:types
+pnpm i18n:status
+pnpm i18n:lint
+```
+
+## السلوك والحالات الحدّية
+
+- يُسجَّل `useT` كاسم استخراج لأن الحزمة تُصدّر خطافها الخاص؛ وبدون ذلك تُصبح المفاتيح المستدعاة عبر
+  `useT` غير مرئية للماسح.
+- يُهمَل `apps/docs/**` لأن موقع التوثيق يستخدم i18n الخاص بـ FumaDocs لا هذه الحزمة. وهذا يُبقي نصوص
+  التوثيق المُهمَلة من تلويث كتالوجات الحزمة.
+- يربط الملف المولَّد `@types/i18next.d.ts` القيمة `defaultNS: 'common'` و`enableSelector: false`
+  ويستورد `resources.d.ts` المولَّد؛ أعد توليده بعد تغيير الكتالوجات كي يبقى `t()` مُنمَّطاً.
+- `removeUnusedKeys: false` يعني أن مفتاحاً لم يعد مرجعاً لا يُحذف تلقائياً.
+
+## أنماط الفشل
+
+يجعل `--ci` الأمر `extract` يخرج بقيمة غير صفرية حين كان سيتغيّر ملف. ويخرج `status` بقيمة غير صفرية
+عند المفاتيح الناقصة. وكلاهما جزء من `pnpm verify`، فيفشل CI قبل شحن كتالوج غير متزامن.
+
+## ذو صلة
+
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
+- [المفاتيح المُنمَّطة](/guides/typed-keys)
+- [نظرة عامة على المعمارية](/architecture/overview)

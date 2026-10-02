@@ -1,0 +1,73 @@
+---
+title: Zustand Store
+description: createZustandLocaleStore and the LocaleStore shape for apps that keep locale in Zustand.
+---
+
+## Purpose
+
+`packages/i18n/src/store/zustand.ts` provides an optional locale store for applications that already
+use Zustand. It holds the same `{ lng, dir, isRtl, status }` mirror as the React context, plus two
+setters. It is a convenience, not a requirement.
+
+## When to Use It
+
+Use it when many components read locale metadata outside the React tree — for example, in Zustand
+selectors, middleware, or non-React logic. If your app already reads everything through
+`useLocale()`, you do not need it.
+
+## Usage
+
+```ts
+import { createZustandLocaleStore } from '@faang/i18n/zustand'
+
+const useLocaleStore = createZustandLocaleStore({ lng: 'en' })
+
+useLocaleStore.getState().setLocale('ar')
+useLocaleStore.getState().dir // 'rtl'
+useLocaleStore.getState().setStatus('loading-ns')
+```
+
+## API
+
+```ts
+function createZustandLocaleStore(initial: { lng: string }): UseBoundStore<...>
+```
+
+It returns a Zustand store whose state is a `LocaleStore`.
+
+### LocaleStore
+
+<AutoTypeTable path="../../packages/i18n/src/store/zustand.ts" name="LocaleStore" />
+
+| Member | Signature | Notes |
+|---|---|---|
+| `lng` | `string` | current locale |
+| `dir` | `Dir` | derived from `lng` |
+| `isRtl` | `boolean` | `dir === 'rtl'` |
+| `status` | `'hydrated' \| 'switching' \| 'loading-ns'` | initial `'hydrated'` |
+| `setLocale` | `(lng: string) => void` | updates `lng`, `dir`, and `isRtl` together |
+| `setStatus` | `(status) => void` | updates `status` only |
+
+## Parameters and Returns
+
+`initial.lng` seeds the store. `dir` and `isRtl` are computed immediately from that value via
+`dirFor`, and `status` starts as `'hydrated'`.
+
+## Behavior and Edge Cases
+
+- `setLocale` recomputes `dir` and `isRtl` in the same `set`, so a subscriber never observes a
+  locale with a stale direction.
+- The store does not subscribe to i18next or trigger loads; it is a metadata mirror. Pair it with
+  `changeLocale`/navigation to actually switch language.
+- This `LocaleSnapshot` type is structurally identical to the one in `@faang/i18n/react` but declared
+  separately, so the store entry point does not pull in React.
+
+## Failure Modes
+
+`dirFor` never throws, so the setters are total. Passing an unknown locale yields `dir: 'ltr'`.
+
+## Related
+
+- [Redux Store](/packages/store/redux)
+- [Context and LocaleSnapshot](/packages/react/context)
+- [Locale Protocol](/packages/kernel/locale-protocol)

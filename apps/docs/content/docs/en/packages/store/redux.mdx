@@ -1,0 +1,83 @@
+---
+title: Redux Store
+description: localeSlice, its actions, and selectors for apps that keep locale in Redux Toolkit.
+---
+
+## Purpose
+
+`packages/i18n/src/store/redux.ts` provides an optional Redux Toolkit slice for applications that
+manage state with RTK. Like the Zustand adapter, it mirrors `{ lng, dir, isRtl, status }` and does not
+own translated strings.
+
+## When to Use It
+
+Register `localeSlice.reducer` under the `locale` key when your store is central to your app's state.
+You get `localeChanged` and `localeStatusChanged` actions and two selectors.
+
+## Usage
+
+```ts
+import { configureStore } from '@reduxjs/toolkit'
+import {
+  localeSlice,
+  localeChanged,
+  localeStatusChanged,
+  selectLocale,
+  selectDir,
+} from '@faang/i18n/redux'
+
+export const store = configureStore({ reducer: { locale: localeSlice.reducer } })
+
+store.dispatch(localeChanged('ar'))
+selectDir(store.getState()) // 'rtl'
+store.dispatch(localeStatusChanged('loading-ns'))
+```
+
+## API
+
+### localeSlice
+
+```ts
+const localeSlice: Slice<LocaleState, { localeChanged; localeStatusChanged }, 'locale'>
+```
+
+| Export | Kind | Notes |
+|---|---|---|
+| `localeSlice` | slice | name `'locale'`; reducer registered under `locale` |
+| `localeChanged` | action creator | `PayloadAction<string>` |
+| `localeStatusChanged` | action creator | `PayloadAction<LocaleState['status']>` |
+| `selectLocale` | selector | `(state) => state.locale` |
+| `selectDir` | selector | `(state) => state.locale.dir` |
+
+### LocaleState
+
+<AutoTypeTable path="../../packages/i18n/src/store/redux.ts" name="LocaleState" />
+
+The initial state is `{ lng: 'en', dir: 'ltr', isRtl: false, status: 'hydrated' }`.
+
+## Parameters and Returns
+
+`localeChanged(lng)` sets `lng`, recomputes `dir` via `dirFor`, and derives `isRtl`.
+`localeStatusChanged(status)` sets `status`. Selectors read from a store whose `locale` key holds a
+`LocaleState`.
+
+## Behavior and Edge Cases
+
+- Immer (RTK) lets the reducer mutate `state` directly; the slice updates `dir` in the same action so
+  there is no intermediate inconsistent state.
+- The initial locale is hard-coded to `'en'`. If you support a different default and want the slice to
+  start there, dispatch `localeChanged` after configuring the store, or supply a custom `preloadedState`.
+- The selectors assume the slice is mounted under the key `locale`; rename it and you must write your
+  own selectors.
+- `LocaleState` is structurally identical to the React `LocaleSnapshot` but independent, so importing
+  it does not load React.
+
+## Failure Modes
+
+Neither reducer throws. An unknown locale string yields `dir: 'ltr'` and `isRtl: false`.
+
+## Related
+
+- [Zustand Store](/packages/store/zustand)
+- [Context and LocaleSnapshot](/packages/react/context)
+- [Locale Protocol](/packages/kernel/locale-protocol)

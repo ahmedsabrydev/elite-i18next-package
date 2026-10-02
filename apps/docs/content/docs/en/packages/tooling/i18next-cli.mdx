@@ -1,0 +1,96 @@
+---
+title: i18next-cli and Scripts
+description: The pinned CLI, its four commands, the repo config, and the root verification pipeline.
+---
+
+## Purpose
+
+The package pins a single CLI, `i18next-cli`, as its extraction and type-generation toolchain. The
+constants in `packages/i18n/src/cli/index.ts` record the package name, version, and supported
+commands; the root `package.json` wraps them as `pnpm i18n:*` scripts.
+
+## Constants
+
+```ts
+// packages/i18n/src/cli/index.ts
+export const CLI_PACKAGE = 'i18next-cli'
+export const CLI_VERSION = '1.73.2'
+export const CLI_COMMANDS = ['extract', 'types', 'status', 'lint'] as const
+```
+
+## Commands
+
+| Command | Script | Purpose |
+|---|---|---|
+| `extract` | `pnpm i18n:extract` | scan sources for `t()`/`useT` keys and write catalog JSON |
+| `types` | `pnpm i18n:types` | regenerate `packages/i18n/src/@types/*` for typed keys |
+| `status` | `pnpm i18n:status` | report missing/extra keys per locale |
+| `lint` | `pnpm i18n:lint` | fail on catalog problems |
+
+`extract` supports a CI-safe dry run:
+
+```bash
+pnpm i18n:extract --ci --dry-run
+```
+
+## Configuration
+
+`i18next.config.ts` at the repo root drives the CLI:
+
+```ts
+import { defineConfig } from 'i18next-cli'
+
+export default defineConfig({
+  locales: ['en', 'ar'],
+  extract: {
+    input: ['packages/i18n/src/**/*.{ts,tsx}', 'apps/*/src/**/*.{ts,tsx}'],
+    ignore: ['**/__tests__/**', '**/*.test.{ts,tsx}', '**/*.test-d.ts', 'apps/docs/**'],
+    useTranslationNames: ['useTranslation', 'useT'],
+    output: 'packages/i18n/catalogs/{{language}}/{{namespace}}.json',
+    defaultNS: 'common',
+    keySeparator: '.',
+    nsSeparator: ':',
+    removeUnusedKeys: false,
+  },
+  types: { output: 'packages/i18n/src/@types/i18next.d.ts' },
+})
+```
+
+| Setting | Value | Why it matters |
+|---|---|---|
+| `locales` | `['en', 'ar']` | extraction writes both catalog trees |
+| `input` | package + contract-app sources | app strings are extracted too |
+| `ignore` | tests and `apps/docs/**` | the docs app does not dogfood `@faang/i18n` |
+| `useTranslationNames` | `useTranslation`, `useT` | recognizes the wrapper hook |
+| `output` | `catalogs/{{language}}/{{namespace}}.json` | one file per locale and namespace |
+| `removeUnusedKeys` | `false` | keys are removed only deliberately |
+
+## Usage
+
+```bash
+pnpm i18n:extract
+pnpm i18n:types
+pnpm i18n:status
+pnpm i18n:lint
+```
+
+## Behavior and Edge Cases
+
+- `useT` is registered as an extraction name because the package exports its own hook; without it,
+  keys called through `useT` would be invisible to the scanner.
+- `apps/docs/**` is ignored because the documentation site uses FumaDocs' own i18n, not this package.
+  This keeps the ignored docs prose from polluting the package catalogs.
+- The generated `@types/i18next.d.ts` wires `defaultNS: 'common'` and `enableSelector: false` and
+  imports the generated `resources.d.ts`; regenerate it after changing catalogs so `t()` stays typed.
+- `removeUnusedKeys: false` means a key that is no longer referenced is not deleted automatically.
+
+## Failure Modes
+
+`--ci` makes `extract` exit non-zero when it would change files. `status` exits non-zero on missing
+keys. Both are part of `pnpm verify`, so CI fails before shipping an out-of-sync catalog.
+
+## Related
+
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [Typed Keys](/guides/typed-keys)
+- [Architecture Overview](/architecture/overview)

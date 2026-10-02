@@ -1,0 +1,105 @@
+---
+title: Catalogs and Budgets
+description: The shared/shell namespace sets, the catalog hash protocol, and the gzip budget gates.
+---
+
+## Purpose
+
+This page covers the data side of the package: the namespace taxonomy in
+`packages/i18n/src/catalogs/index.ts`, the subpath that exposes catalog JSON
+(`@faang/i18n/catalogs/*`), the hash protocol that detects changed catalogs, and the budget checker
+in `packages/i18n/scripts/check-budget.mjs`.
+
+## Namespace Taxonomy
+
+```ts
+// packages/i18n/src/catalogs/index.ts
+export const SHARED_NAMESPACES = ['common', 'errors', 'auth', 'validation', 'datetime'] as const
+export const SHELL_NAMESPACES = ['common', 'errors'] as const
+export type SharedNamespace = (typeof SHARED_NAMESPACES)[number]
+```
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `SHARED_NAMESPACES` | `common, errors, auth, validation, datetime` | namespaces the package ships for every app |
+| `SHELL_NAMESPACES` | `common, errors` | the subset always loaded with the shell |
+| `SharedNamespace` | union | one of the five shared names |
+
+`SHARED_NAMESPACES` is the source of truth for tools and tests. It is defined in the source tree and is
+not re-exported from the root entry point; the public catalog surface is the JSON subpath:
+
+```ts
+import enCommon from '@faang/i18n/catalogs/en/common.json'
+import arErrors from '@faang/i18n/catalogs/ar/errors.json'
+```
+
+The subpath is declared as `"./catalogs/*": "./catalogs/*"`, so `@faang/i18n/catalogs` (the directory)
+is also usable as the `catalogs.shared` base specifier, which the contract apps do in `next-web` and
+`vite-web`.
+
+## Hash Protocol
+
+A catalog's identity is the first 12 hex characters of a SHA-256 of its raw bytes:
+
+```ts
+createHash('sha256').update(source).digest('hex').slice(0, 12)
+```
+
+- The Vite plugin writes `{ hash, bytes }` per namespace into `i18n-manifest.json`.
+- `PersistentStore.get`/`set` accept an optional `hash` and treat a mismatch as a miss, enabling
+  invalidation when a catalog changes.
+- The tiered backend does not currently pass a hash when calling the persistent store, so
+  hash-based invalidation is available but not yet wired (a recorded deferral).
+
+## Budgets
+
+`check-budget.mjs` enforces three gzip limits (run via `pnpm budget` / `turbo run budget`):
+
+| Scope | Limit | Checked against |
+|---|---|---|
+| kernel | 12 KiB | gzip size of `dist/index.js` |
+| shell | 12 KiB | sum of gzipped `common.json` + `errors.json` per locale |
+| namespace | 16 KiB | gzipped size of each catalog `.json` |
+
+The kernel also exports a `BUDGETS` object that adds `manifestGzipBytes: 1536`:
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+If `dist/index.js` is missing, the checker reports `run build first` and exits non-zero.
+
+## Usage
+
+```bash
+pnpm build
+pnpm budget
+# Budgets OK
+```
+
+## Behavior and Edge Cases
+
+- Only `common.json` and `errors.json` count toward the shell budget; the other three shared
+  namespaces are measured only against the per-namespace limit.
+- The checker iterates locale directories under `catalogs/` and ignores non-directories.
+- Budgets are gzip, not raw size, so repetitive JSON compresses well; keep keys short and avoid
+  duplicating long strings.
+- The manifest limit (`1536` bytes) lives in `BUDGETS` for tooling but is not enforced by
+  `check-budget.mjs` in v1.
+
+## Failure Modes
+
+`pnpm budget` exits `1` and prints each failing entry (`<lng>/<file> <bytes>B > <limit>B`). A missing
+kernel build is itself a budget failure.
+
+## Related
+
+- [i18next-cli and Scripts](/packages/tooling/i18next-cli)
+- [Catalog Protocol](/architecture/catalog-protocol)
+- [Defaults and Constants](/packages/kernel/defaults)
+- [Vite Manifest Plugin](/packages/vite/plugin)

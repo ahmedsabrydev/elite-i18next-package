@@ -1,0 +1,60 @@
+---
+title: Platform Stubs
+description: createNativeI18n, createNodeI18n, and createElectronI18n — reserved entry points that throw until later milestones.
+---
+
+## Purpose
+
+`packages/i18n/src/stubs/` reserves three platform entry points for runtimes the v1 release does not
+implement: React Native (`native`), Node servers (`node`), and Electron (`electron`). Each exports a
+single factory that throws a clear, milestone-tagged error.
+
+## When to Use It
+
+You should not use them. They exist so that:
+
+- the subpaths `@faang/i18n/native`, `@faang/i18n/node`, and `@faang/i18n/electron` resolve in the
+  package exports map, and
+- code that reaches for an unimplemented runtime fails loudly at the call site instead of importing
+  `undefined` and crashing somewhere unrelated.
+
+## Usage
+
+```ts
+import { createNativeI18n } from '@faang/i18n/native'
+
+createNativeI18n()
+// Error: @faang/i18n/native is not implemented in v1. Track the v1.1 milestone.
+```
+
+## API
+
+| Export | Subpath | Message | Milestone |
+|---|---|---|---|
+| `createNativeI18n` | `@faang/i18n/native` | `@faang/i18n/native is not implemented in v1...` | v1.1 |
+| `createNodeI18n` | `@faang/i18n/node` | `@faang/i18n/node is not implemented in v1...` | v1.2 |
+| `createElectronI18n` | `@faang/i18n/electron` | `@faang/i18n/electron is not implemented in v1...` | v1.3 |
+
+Each function has return type `never`: it always throws.
+
+## Parameters and Returns
+
+All three take no arguments. Because the return type is `never`, TypeScript treats any code after a
+call as unreachable, which surfaces accidental use during compilation as well as at runtime.
+
+## Behavior and Edge Cases
+
+- The error message names the exact subpath and a target milestone, so an issue report is actionable.
+- These modules have no runtime dependencies, so importing the subpath does not pull in React, the
+  loader, or i18next.
+- The stubs are intentionally not exported from the root entry point; you must import the subpath
+  explicitly, which keeps them out of applications that never reference them.
+
+## Failure Modes
+
+They always throw `Error` with the message above. There is no silent no-op mode.
+
+## Related
+
+- [i18next-cli and Scripts](/packages/tooling/i18next-cli)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)

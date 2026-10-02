@@ -1,0 +1,104 @@
+---
+title: الكتالوجات والميزانيات
+description: مجموعتا مساحات الأسماء المشتركة والقشرة، وبروتوكول تجزئة الكتالوج، وبوابات ميزانية gzip.
+---
+
+## الغرض
+
+تغطّي هذه الصفحة الجانب البياني للحزمة: تصنيف مساحات الأسماء في
+`packages/i18n/src/catalogs/index.ts`، والمسار الفرعي الذي يعرض JSON الكتالوجات
+(`@faang/i18n/catalogs/*`)، وبروتوكول التجزئة الذي يكشف الكتالوجات المتغيّرة، ومدقّق الميزانية في
+`packages/i18n/scripts/check-budget.mjs`.
+
+## تصنيف مساحات الأسماء
+
+```ts
+// packages/i18n/src/catalogs/index.ts
+export const SHARED_NAMESPACES = ['common', 'errors', 'auth', 'validation', 'datetime'] as const
+export const SHELL_NAMESPACES = ['common', 'errors'] as const
+export type SharedNamespace = (typeof SHARED_NAMESPACES)[number]
+```
+
+| الثابت | القيمة | المعنى |
+|---|---|---|
+| `SHARED_NAMESPACES` | `common, errors, auth, validation, datetime` | مساحات الأسماء التي تشحنها الحزمة لكل تطبيق |
+| `SHELL_NAMESPACES` | `common, errors` | المجموعة الفرعية التي تُحمَّل دائماً مع القشرة |
+| `SharedNamespace` | اتحاد | واحدة من الأسماء الخمسة المشتركة |
+
+`SHARED_NAMESPACES` مصدر الحقيقة للأدوات والاختبارات. وهي معرّفة في شجرة المصدر وغير مُصدَّرة من نقطة
+الدخول الجذرية؛ وسطح الكتالوج العام هو المسار الفرعي لـ JSON:
+
+```ts
+import enCommon from '@faang/i18n/catalogs/en/common.json'
+import arErrors from '@faang/i18n/catalogs/ar/errors.json'
+```
+
+المسار الفرعي معرّف كـ `"./catalogs/*": "./catalogs/*"`، لذا يمكن استخدام `@faang/i18n/catalogs`
+(الدليل) أيضاً كمُحدِّد أساس لـ `catalogs.shared`، وهو ما تفعله التطبيقات التعاقدية في `next-web`
+و`vite-web`.
+
+## بروتوكول التجزئة
+
+هوية الكتالوج هي أول 12 محرفاً سادس عشرياً من SHA-256 لبايتاته الخام:
+
+```ts
+createHash('sha256').update(source).digest('hex').slice(0, 12)
+```
+
+- تكتب إضافة Vite `{ hash, bytes }` لكل مساحة أسماء في `i18n-manifest.json`.
+- تقبل `PersistentStore.get`/`set` قيمة `hash` اختيارية وتعتبر عدم التطابق غياباً، مما يتيح الإبطال
+  عند تغيّر الكتالوج.
+- لا تمرّر الخلفية المُدرَّجة حالياً قيمة hash عند استدعاء المخزن الدائم، فإبطال التجزئة متاح لكنه غير
+  موصول بعد (تأجيل مسجَّل).
+
+## الميزانيات
+
+يفرض `check-budget.mjs` ثلاث حدود gzip (يُشغَّل عبر `pnpm budget` أو `turbo run budget`):
+
+| النطاق | الحد | يُفحص على |
+|---|---|---|
+| النواة | 12 KiB | حجم gzip لـ `dist/index.js` |
+| القشرة | 12 KiB | مجموع gzip لـ `common.json` + `errors.json` لكل لغة |
+| مساحة الأسماء | 16 KiB | حجم gzip لكل ملف كتالوج `.json` |
+
+وتُصدّر النواة أيضاً كائن `BUDGETS` يضيف `manifestGzipBytes: 1536`:
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+وإن كان `dist/index.js` مفقوداً يبلّغ المدقّق بـ `run build first` ويخرج بقيمة غير صفرية.
+
+## الاستخدام
+
+```bash
+pnpm build
+pnpm budget
+# Budgets OK
+```
+
+## السلوك والحالات الحدّية
+
+- يُحتسب لصالح ميزانية القشرة فقط `common.json` و`errors.json`؛ وتُقاس المساحات الثلاث المشتركة
+  الأخرى على حدّ كل مساحة أسماء فقط.
+- يمرّ المدقّق على أدلة اللغات تحت `catalogs/` ويُهمل ما ليس دليلاً.
+- الميزانيات بوحدة gzip لا الحجم الخام، فـ JSON المتكرر يُضغط جيداً؛ أبقِ المفاتيح قصيرة وتجنّب تكرار
+  النصوص الطويلة.
+- حدّ البيان (`1536` بايت) موجود في `BUDGETS` للأدوات لكنه لا يُفرض في `check-budget.mjs` في v1.
+
+## أنماط الفشل
+
+يخرج `pnpm budget` بالقيمة `1` ويطبع كل مدخل فاشل
+(`<lng>/<file> <bytes>B > <limit>B`). وغياب بناء النواة نفسه فشل ميزانية.
+
+## ذو صلة
+
+- [i18next-cli والسكربتات](/packages/tooling/i18next-cli)
+- [بروتوكول الكتالوج](/architecture/catalog-protocol)
+- [الافتراضات والثوابت](/packages/kernel/defaults)
+- [إضافة Vite للبيان](/packages/vite/plugin)

@@ -1,0 +1,71 @@
+---
+title: متجر Zustand
+description: createZustandLocaleStore وشكل LocaleStore للتطبيقات التي تُبقي اللغة في Zustand.
+---
+
+## الغرض
+
+يوفّر `packages/i18n/src/store/zustand.ts` متجر لغة اختيارياً للتطبيقات التي تستخدم Zustand بالفعل.
+ويحمل المرآة نفسها `{ lng, dir, isRtl, status }` الموجودة في سياق React، مع مُعيِّنين. وهو راحة لا
+شرط.
+
+## متى تستخدمه
+
+استخدمه عندما تقرأ مكوّنات كثيرة بيانات اللغة خارج شجرة React — مثلاً في محددات Zustand أو الوسائط
+أو منطق غير React. وإن كان تطبيقك يقرأ كل شيء عبر `useLocale()` فلست بحاجة إليه.
+
+## الاستخدام
+
+```ts
+import { createZustandLocaleStore } from '@faang/i18n/zustand'
+
+const useLocaleStore = createZustandLocaleStore({ lng: 'en' })
+
+useLocaleStore.getState().setLocale('ar')
+useLocaleStore.getState().dir // 'rtl'
+useLocaleStore.getState().setStatus('loading-ns')
+```
+
+## واجهة البرمجة
+
+```ts
+function createZustandLocaleStore(initial: { lng: string }): UseBoundStore<...>
+```
+
+يُرجع متجر Zustand حالته `LocaleStore`.
+
+### LocaleStore
+
+<AutoTypeTable path="../../packages/i18n/src/store/zustand.ts" name="LocaleStore" />
+
+| العضو | التوقيع | ملاحظات |
+|---|---|---|
+| `lng` | `string` | اللغة الحالية |
+| `dir` | `Dir` | مشتقة من `lng` |
+| `isRtl` | `boolean` | `dir === 'rtl'` |
+| `status` | `'hydrated' \| 'switching' \| 'loading-ns'` | البداية `'hydrated'` |
+| `setLocale` | `(lng: string) => void` | يحدّث `lng` و`dir` و`isRtl` معاً |
+| `setStatus` | `(status) => void` | يحدّث `status` وحده |
+
+## المعاملات والمُرجَع
+
+تبذر `initial.lng` المتجر. وتُحسب `dir` و`isRtl` فوراً من تلك القيمة عبر `dirFor`، وتبدأ `status`
+بـ `'hydrated'`.
+
+## السلوك والحالات الحدّية
+
+- تعيد `setLocale` حساب `dir` و`isRtl` في `set` نفسها، فلا يرى مشترك لغة باتجاه قديم.
+- لا يشترك المتجر في i18next ولا يُشغّل تحميلاً؛ فهو مرآة بيانات وصفية. اقرنه بـ `changeLocale`
+  أو التوجيه لتبديل اللغة فعلاً.
+- نوع `LocaleSnapshot` هذا مطابق بنيوياً لنظيره في `@faang/i18n/react` لكنه معلَن منفصلاً، فلا تجلب
+  نقطة دخول المتجر React.
+
+## أنماط الفشل
+
+لا ترمي `dirFor` أبداً، فالمُعيِّنان كليان. وتمرير لغة مجهولة يُنتج `dir: 'ltr'`.
+
+## ذو صلة
+
+- [متجر Redux](/packages/store/redux)
+- [السياق وLocaleSnapshot](/packages/react/context)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
