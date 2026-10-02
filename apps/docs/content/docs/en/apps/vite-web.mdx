@@ -1,0 +1,117 @@
+---
+title: vite-web
+description: The Vite contract app — client routing, the zero-flicker LocaleGuard, and runtime wiring.
+---
+
+## Purpose
+
+`apps/vite-web` is a minimal client-rendered React Router application that exercises the `/react` and
+`/vite` adapters. It demonstrates the CSR zero-flicker technique: resolve the locale from the path,
+set `lang`/`dir`, wait for the shell namespace, and only then render the UI.
+
+## File Walkthrough
+
+### `src/i18n.ts`
+
+Same wiring as the Next app, but with a client `public` catalog path:
+
+```ts
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  fallbackLng: 'en',
+  catalogs: { public: '/catalogs' },
+  backend: { load: async (lng, ns) => shared[`${lng}:${ns}`] },
+})
+```
+
+The static `shared` map keeps the browser build free of dynamic imports; the `catalogs.public` path is
+what a production app would serve as JSON.
+
+### `src/main.tsx`
+
+Standard React root. It mounts `RouterProvider` inside `StrictMode` and throws if `#root` is missing.
+
+### `src/routes.tsx`
+
+Declares three routes with `createBrowserRouter`:
+
+```tsx
+export const router = createBrowserRouter([
+  { path: '/', element: <Navigate to={`/${runtime.config.defaultLocale}`} replace /> },
+  { path: '/:lng', element: <LocaleGuard><Home /></LocaleGuard> },
+  { path: '/:lng/settings', element: <LocaleGuard><Settings /></LocaleGuard> },
+])
+```
+
+`/` redirects to the default locale; every real route is parameterized by `:lng` and wrapped in
+`LocaleGuard`.
+
+### `src/locale-guard.tsx`
+
+The zero-flicker guard. It resolves the locale from the path and gates rendering:
+
+```tsx
+const { locale } = matchLocaleFromPath(
+  location.pathname,
+  runtime.config.locales,
+  runtime.config.defaultLocale,
+)
+const [ready, setReady] = useState(() => runtime.has(locale as never, 'common'))
+
+useEffect(() => {
+  document.documentElement.lang = locale
+  document.documentElement.dir = dirFor(locale)
+}, [locale])
+
+useEffect(() => {
+  let cancelled = false
+  if (!runtime.has(locale as never, 'common')) {
+    void runtime.loadNamespace(locale as never, 'common').then(() => {
+      if (!cancelled) setReady(true)
+    })
+  }
+  return () => { cancelled = true }
+}, [locale])
+
+if (!ready) return <div data-testid="locale-boot" aria-busy="true" />
+return <>{children}</>
+```
+
+The key idea: `lang` and `dir` are applied synchronously in an effect even while the placeholder is
+shown, so the document is direction-correct before any translated text appears. The second effect
+loads `common` once, guards against unmount with a `cancelled` flag, and flips `ready` only after the
+namespace resolves.
+
+### `src/pages/Home.tsx` and `src/pages/Settings.tsx`
+
+Both pages resolve the locale with `matchLocaleFromPath` and mount `I18nProvider` with
+`navigate={(href) => (window.location.href = href)}`. `Home` reads `useT('common')`; `Settings` also
+uses `useLocale()` to show `lng`, `isRtl`, and a `changeLocale` button.
+
+### `src/__tests__/locale-guard.test.tsx`
+
+Proves both states under a `MemoryRouter`:
+
+```ts
+render(<MemoryRouter initialEntries={['/ar/settings']}><LocaleGuard><span>chrome</span></LocaleGuard></MemoryRouter>)
+expect(screen.getByTestId('locale-boot')).toBeTruthy()
+expect(screen.queryByText('chrome')).toBeNull()
+
+render(<MemoryRouter initialEntries={['/en/settings']}><LocaleGuard><span>chrome</span></LocaleGuard></MemoryRouter>)
+await waitFor(() => expect(screen.getByText('chrome')).toBeTruthy())
+```
+
+## What It Proves
+
+- `matchLocaleFromPath` correctly extracts the locale from client routes.
+- The guard prevents untranslated content from flashing, and sets direction before paint.
+- `I18nProvider` + `useT` + `useLocale` work in a plain CSR app with no server.
+- `changeLocale` performs a full navigation through the supplied `navigate`.
+
+## Related
+
+- [Vite Routing Helpers](/packages/vite/routes)
+- [I18nProvider](/packages/react/provider)
+- [Zero-Flicker Rendering](/architecture/zero-flicker)
+- [next-web](/apps/next-web)

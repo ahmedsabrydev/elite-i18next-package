@@ -1,0 +1,127 @@
+---
+title: next-web
+description: The Next.js contract app — middleware, runtime wiring, server layout, and the zero-flicker proof.
+---
+
+## Purpose
+
+`apps/next-web` is a minimal Next App Router application that exercises the `/next` adapter end to end:
+cookie/header redirect, per-locale static params, server-side namespace loading, and pre-paint
+`lang`/`dir`. It is the executable proof that the server path works, and it is covered by the workspace
+test and build pipeline.
+
+## File Walkthrough
+
+### `src/i18n.ts`
+
+Creates the shared runtime and provides catalogs through an explicit backend:
+
+```ts
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  fallbackLng: 'en',
+  catalogs: { public: 'catalogs', shared: '@faang/i18n/catalogs' },
+  backend: { load: async (lng, ns) => shared[`${lng}:${ns}`] },
+})
+```
+
+The JSON modules `enCommon`, `arCommon`, `enErrors`, and `arErrors` are imported from
+`@faang/i18n/catalogs/*` and placed in a `shared` map keyed `"<lng>:<ns>"`. This is how a Next/Turbopack
+app avoids dynamic `require`: the backend is a static lookup, not a runtime resolution. `catalogs.shared`
+still names the subpath so the default chunk loader (used in Node tests) behaves identically.
+
+### `src/proxy.ts`
+
+The Next 16 middleware entry. It adapts `i18nMiddleware(runtime)` to `NextResponse`:
+
+```ts
+const middleware = i18nMiddleware(runtime)
+const COOKIE = 'i18n_lng'
+
+export function proxy(request: NextRequest) {
+  const result = middleware({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    acceptLanguage: request.headers.get('accept-language') ?? undefined,
+    cookie: request.cookies.get(COOKIE)?.value,
+  })
+  if (!result) return NextResponse.next()
+  const url = request.nextUrl.clone()
+  const [pathname, search] = result.redirectTo.split('?')
+  url.pathname = pathname ?? '/'
+  url.search = search ? `?${search}` : ''
+  const response = NextResponse.redirect(url, 307)
+  if (result.setCookie) {
+    response.cookies.set(COOKIE, result.locale, { path: '/', sameSite: 'lax', httpOnly: false })
+  }
+  return response
+}
+
+export const config = { matcher: ['/((?!_next|.*\\..*).*)'] }
+```
+
+It uses a temporary 307 redirect per the URL-first policy: a locale-less request is redirected to
+`/{locale}{pathname}{search}`, and the chosen locale is persisted in the cookie only when the incoming
+cookie was invalid. `httpOnly: false` lets client code read the cookie if needed.
+
+### `src/app/[lng]/layout.tsx`
+
+The root layout loads the shell namespaces and sets direction before paint:
+
+```tsx
+export function generateStaticParams() {
+  return localeStaticParams(runtime)
+}
+
+const shell = defineRouteI18n({ runtime, ns: ['common', 'errors'] })
+
+export default async function LocaleLayout({ children, params }) {
+  const { lng } = await params
+  await shell.load(lng)
+  const { lang, dir } = getHtmlAttributes(lng)
+  return (
+    <html lang={lang} dir={dir}>
+      <body data-shell-ready="true">{children}</body>
+    </html>
+  )
+}
+```
+
+`localeStaticParams` pre-renders `/en` and `/ar`; `defineRouteI18n` declares the shell set; and the
+server emits `<html lang="ar" dir="rtl">` in the first byte, so there is no client-side direction
+correction.
+
+### `src/app/[lng]/page.tsx`
+
+A server component that loads on demand and translates:
+
+```tsx
+const { getT } = createI18nServer(runtime)
+const t = await getT(lng, 'common')
+return <main><h1>{t('app.name')}</h1><p>{t('app.tagline')}</p></main>
+```
+
+### `src/__tests__/server-locale.test.ts`
+
+Asserts the zero-flicker contract directly:
+
+```ts
+expect(getHtmlAttributes('ar')).toEqual({ lang: 'ar', dir: 'rtl' })
+expect(getHtmlAttributes('en')).toEqual({ lang: 'en', dir: 'ltr' })
+```
+
+## What It Proves
+
+- The middleware redirect is correct and cookie-aware, and never redirects a request that already has a
+  locale prefix.
+- The adapter works under Turbopack without dynamic require or static JSON imports inside the package.
+- Direction and language are server-rendered, eliminating the RTL flash.
+- Namespaces load on the server before translation, so a cold SSR render does not emit keys.
+
+## Related
+
+- [Redirect Middleware](/packages/next/middleware)
+- [Server Helpers](/packages/next/server)
+- [Zero-Flicker Rendering](/architecture/zero-flicker)
+- [vite-web](/apps/vite-web)

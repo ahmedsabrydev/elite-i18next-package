@@ -1,0 +1,124 @@
+---
+title: next-web
+description: التطبيق التعاقدي في Next.js — الوسيطة وتوصيل زمن التشغيل وتخطيط الخادم ودليل عدم الوميض.
+---
+
+## الغرض
+
+`apps/next-web` تطبيق Next App Router أدنى يمارس مُهايئ `/next` من طرف إلى طرف: إعادة توجيه الكوكي
+والترويسة، ومعاملات ثابتة لكل لغة، وتحميل مساحات الأسماء على الخادم، و`lang`/`dir` قبل الرسم. وهو
+الدليل القابل للتنفيذ على عمل مسار الخادم، ويغطّيه خط اختبار وبناء مساحة العمل.
+
+## جولة في الملفات
+
+### `src/i18n.ts`
+
+ينشئ زمن التشغيل المشترك ويوفّر الكتالوجات عبر خلفية صريحة:
+
+```ts
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  fallbackLng: 'en',
+  catalogs: { public: 'catalogs', shared: '@faang/i18n/catalogs' },
+  backend: { load: async (lng, ns) => shared[`${lng}:${ns}`] },
+})
+```
+
+تُستورد وحدات JSON ‏`enCommon` و`arCommon` و`enErrors` و`arErrors` من `@faang/i18n/catalogs/*`
+وتوضع في خريطة `shared` مفتاحها `"<lng>:<ns>"`. وهكذا يتجنّب تطبيق Next/Turbopack الـ `require`
+الديناميكي: فالخلفية بحث ساكن لا حسم وقت تشغيل. ويظل `catalogs.shared` يسمّي المسار الفرعي كي يتصرف
+مُحمّل القطع الافتراضي (المستخدم في اختبارات Node) بالمثل.
+
+### `src/proxy.ts`
+
+مدخل الوسيطة في Next 16. وهو يُكيِّف `i18nMiddleware(runtime)` مع `NextResponse`:
+
+```ts
+const middleware = i18nMiddleware(runtime)
+const COOKIE = 'i18n_lng'
+
+export function proxy(request: NextRequest) {
+  const result = middleware({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    acceptLanguage: request.headers.get('accept-language') ?? undefined,
+    cookie: request.cookies.get(COOKIE)?.value,
+  })
+  if (!result) return NextResponse.next()
+  const url = request.nextUrl.clone()
+  const [pathname, search] = result.redirectTo.split('?')
+  url.pathname = pathname ?? '/'
+  url.search = search ? `?${search}` : ''
+  const response = NextResponse.redirect(url, 307)
+  if (result.setCookie) {
+    response.cookies.set(COOKIE, result.locale, { path: '/', sameSite: 'lax', httpOnly: false })
+  }
+  return response
+}
+
+export const config = { matcher: ['/((?!_next|.*\\..*).*)'] }
+```
+
+يستخدم إعادة توجيه 307 مؤقتة وفق سياسة البدء بالمسار: يُعاد توجيه طلب بلا لغة إلى
+`/{locale}{pathname}{search}`، وتُحفظ اللغة المختارة في الكوكي فقط عندما كان الكوكي الوارد غير صالح.
+والخيار `httpOnly: false` يتيح لشيفرة العميل قراءة الكوكي عند الحاجة.
+
+### `src/app/[lng]/layout.tsx`
+
+يُحمّل التخطيط الجذري مساحات أسماء القشرة ويضبط الاتجاه قبل الرسم:
+
+```tsx
+export function generateStaticParams() {
+  return localeStaticParams(runtime)
+}
+
+const shell = defineRouteI18n({ runtime, ns: ['common', 'errors'] })
+
+export default async function LocaleLayout({ children, params }) {
+  const { lng } = await params
+  await shell.load(lng)
+  const { lang, dir } = getHtmlAttributes(lng)
+  return (
+    <html lang={lang} dir={dir}>
+      <body data-shell-ready="true">{children}</body>
+    </html>
+  )
+}
+```
+
+تُصيّر `localeStaticParams` المسارين `/en` و`/ar` مسبقاً؛ وتعلن `defineRouteI18n` مجموعة القشرة؛
+ويصدر الخادم `<html lang="ar" dir="rtl">` في البايت الأول، فلا يوجد تصحيح اتجاه في العميل.
+
+### `src/app/[lng]/page.tsx`
+
+مكوّن خادم يُحمّل عند الطلب ويترجم:
+
+```tsx
+const { getT } = createI18nServer(runtime)
+const t = await getT(lng, 'common')
+return <main><h1>{t('app.name')}</h1><p>{t('app.tagline')}</p></main>
+```
+
+### `src/__tests__/server-locale.test.ts`
+
+يؤكد عقد عدم الوميض مباشرةً:
+
+```ts
+expect(getHtmlAttributes('ar')).toEqual({ lang: 'ar', dir: 'rtl' })
+expect(getHtmlAttributes('en')).toEqual({ lang: 'en', dir: 'ltr' })
+```
+
+## ما الذي يُثبته
+
+- إعادة توجيه الوسيطة صحيحة وتراعي الكوكي، ولا تُعيد توجيه طلب يحمل بادئة لغة بالفعل.
+- يعمل المُهايئ تحت Turbopack بلا require ديناميكي أو استيرادات JSON ساكنة داخل الحزمة.
+- يُصيَّر الاتجاه واللغة من الخادم، فيختفي وميض RTL.
+- تُحمَّل مساحات الأسماء على الخادم قبل الترجمة، فلا يُصدر عرض SSR البارد مفاتيح.
+
+## ذو صلة
+
+- [وسيطة إعادة التوجيه](/packages/next/middleware)
+- [مساعدات الخادم](/packages/next/server)
+- [العرض دون وميض](/architecture/zero-flicker)
+- [vite-web](/apps/vite-web)

@@ -1,0 +1,115 @@
+---
+title: vite-web
+description: التطبيق التعاقدي في Vite — توجيه العميل وحارس اللغة مانع الوميض وتوصيل زمن التشغيل.
+---
+
+## الغرض
+
+`apps/vite-web` تطبيق React Router أدنى يُصيَّر في العميل ويمارس مُهايئي `/react` و`/vite`. وهو يوضّح
+تقنية منع الوميض في CSR: احسم اللغة من المسار، واضبط `lang`/`dir`، وانتظر مساحة أسماء القشرة، ثم
+صيّر الواجهة فقط.
+
+## جولة في الملفات
+
+### `src/i18n.ts`
+
+التوصيل نفسه كتطبيق Next، لكن بمسار كتالوج `public` في العميل:
+
+```ts
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  fallbackLng: 'en',
+  catalogs: { public: '/catalogs' },
+  backend: { load: async (lng, ns) => shared[`${lng}:${ns}`] },
+})
+```
+
+تُبقي خريطة `shared` الساكنة بناء المتصفح بعيداً عن الاستيرادات الديناميكية؛ ومسار `catalogs.public`
+هو ما يخدمه تطبيق إنتاجي كـ JSON.
+
+### `src/main.tsx`
+
+جذر React القياسي. يركّب `RouterProvider` داخل `StrictMode` ويرمي إن كان `#root` مفقوداً.
+
+### `src/routes.tsx`
+
+يعلن ثلاثة مسارات بـ `createBrowserRouter`:
+
+```tsx
+export const router = createBrowserRouter([
+  { path: '/', element: <Navigate to={`/${runtime.config.defaultLocale}`} replace /> },
+  { path: '/:lng', element: <LocaleGuard><Home /></LocaleGuard> },
+  { path: '/:lng/settings', element: <LocaleGuard><Settings /></LocaleGuard> },
+])
+```
+
+يعيد `/` التوجيه إلى اللغة الافتراضية؛ وكل مسار حقيقي معامل بـ `:lng` وملفوف في `LocaleGuard`.
+
+### `src/locale-guard.tsx`
+
+حارس منع الوميض. يحسم اللغة من المسار ويبوّب التصيير:
+
+```tsx
+const { locale } = matchLocaleFromPath(
+  location.pathname,
+  runtime.config.locales,
+  runtime.config.defaultLocale,
+)
+const [ready, setReady] = useState(() => runtime.has(locale as never, 'common'))
+
+useEffect(() => {
+  document.documentElement.lang = locale
+  document.documentElement.dir = dirFor(locale)
+}, [locale])
+
+useEffect(() => {
+  let cancelled = false
+  if (!runtime.has(locale as never, 'common')) {
+    void runtime.loadNamespace(locale as never, 'common').then(() => {
+      if (!cancelled) setReady(true)
+    })
+  }
+  return () => { cancelled = true }
+}, [locale])
+
+if (!ready) return <div data-testid="locale-boot" aria-busy="true" />
+return <>{children}</>
+```
+
+الفكرة الجوهرية: يُطبَّق `lang` و`dir` تزامنياً في تأثير حتى أثناء عرض العنصر البديل، فيكون المستند
+صحيح الاتجاه قبل ظهور أي نص مترجم. ويحمّل التأثير الثاني `common` مرة واحدة، ويحمي من إلغاء التركيب
+بعلم `cancelled`، ويقلب `ready` فقط بعد حسم مساحة الأسماء.
+
+### `src/pages/Home.tsx` و`src/pages/Settings.tsx`
+
+تحسم الصفحتان اللغة بـ `matchLocaleFromPath` وتركّبان `I18nProvider` مع
+`navigate={(href) => (window.location.href = href)}`. وتقرأ `Home` الدالة `useT('common')`؛ وتستخدم
+`Settings` أيضاً `useLocale()` لعرض `lng` و`isRtl` وزر `changeLocale`.
+
+### `src/__tests__/locale-guard.test.tsx`
+
+يُثبت الحالتين تحت `MemoryRouter`:
+
+```ts
+render(<MemoryRouter initialEntries={['/ar/settings']}><LocaleGuard><span>chrome</span></LocaleGuard></MemoryRouter>)
+expect(screen.getByTestId('locale-boot')).toBeTruthy()
+expect(screen.queryByText('chrome')).toBeNull()
+
+render(<MemoryRouter initialEntries={['/en/settings']}><LocaleGuard><span>chrome</span></LocaleGuard></MemoryRouter>)
+await waitFor(() => expect(screen.getByText('chrome')).toBeTruthy())
+```
+
+## ما الذي يُثبته
+
+- تستخرج `matchLocaleFromPath` اللغة من مسارات العميل بشكل صحيح.
+- يمنع الحارس وميض المحتوى غير المترجم، ويضبط الاتجاه قبل الرسم.
+- يعمل `I18nProvider` مع `useT` و`useLocale` في تطبيق CSR عادي بلا خادم.
+- تُجري `changeLocale` تنقّلاً كاملاً عبر الدالة `navigate` المزوّدة.
+
+## ذو صلة
+
+- [مساعدات توجيه Vite](/packages/vite/routes)
+- [I18nProvider](/packages/react/provider)
+- [العرض دون وميض](/architecture/zero-flicker)
+- [next-web](/apps/next-web)
