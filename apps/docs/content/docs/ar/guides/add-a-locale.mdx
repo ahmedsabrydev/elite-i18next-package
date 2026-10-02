@@ -1,0 +1,87 @@
+---
+title: إضافة لغة
+description: توسيع اللغات من طرف إلى طرف، بما يشمل الكتالوجات والاستخراج والاتجاه والتوثيق.
+---
+
+## الغرض
+
+تشحن الحزمة `en` و`ar`. يضيف هذا الدليل لغة ثالثة (`fr`) إلى تطبيق، ويغطي إعداد زمن التشغيل
+والكتالوجات والمستخرِج والاتجاه.
+
+## الخطوات
+
+### 1. حدّث إعداد زمن التشغيل
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar', 'fr'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+```
+
+تقود `locales` وسيطة إعادة التوجيه ومساعدات توجيه Vite ونمط البادئة في `changeLocale`.
+
+### 2. أضف أدلة الكتالوجات
+
+```bash
+mkdir -p packages/i18n/catalogs/fr
+cp packages/i18n/catalogs/en/*.json packages/i18n/catalogs/fr/
+```
+
+ثم ترجم النسخ. ويجب وجود كل مساحة أسماء موجودة في `en` لدى `fr` وإلا فشل اختبار التطابق.
+
+### 3. حدّث المستخرِج
+
+```ts
+// i18next.config.ts
+export default defineConfig({
+  locales: ['en', 'ar', 'fr'],
+  // ...
+})
+```
+
+### 4. أعد التوليد وافحص
+
+```bash
+pnpm i18n:extract --ci --dry-run
+pnpm i18n:types
+pnpm i18n:status
+pnpm i18n:lint
+```
+
+### 5. الاتجاه
+
+لا شيء لتفعله للغة من اليسار إلى اليمين: فـ `dirFor('fr')` يُرجع `'ltr'` لأن `fr` ليست في
+`RTL_LOCALES`. وللغة من اليمين إلى اليسار أضفها إلى `RTL_LOCALES` في
+`packages/i18n/src/core/defaults.ts` (أو استخدم أساس RTL موجوداً) كي تتفق `dirFor` و`getHtmlAttributes`
+في Next ولقطة المُزوّد.
+
+## ملاحظة التوثيق
+
+يستخدم تطبيق التوثيق i18n الخاص بـ FumaDocs. وإن كنت توثّق لغة جديدة لموقع FumaDocs فأضفها إلى تعريف
+`i18n` وأضف شجرة `content/docs/<locale>` وتأكّد من وجود مُحلّل ومدخل `dir`. وهذه الحزمة لا تصيّر
+التوثيق عمداً.
+
+## التحقق
+
+```bash
+pnpm --filter @faang/i18n exec vitest run src/__tests__/core/locale.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/catalogs/parity.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/next/middleware.test.ts
+```
+
+## الحالات الحدّية
+
+- يطابق `resolveLocale` الأساس فقط، فيُحسم `fr-CA` إلى `fr` بلا إعداد إضافي.
+- اللغة الموجودة في `locales` مع غياب ملفات كتالوجها تُصيّر اللغة الاحتياطية. وشحنها رغم ذلك يتدهور إلى
+  الإنجليزية بدل الانهيار.
+- `fallbackLng` يأخذ افتراضياً `defaultLocale`؛ عيّنه صراحةً إن أردت للغة ناقصة أن تستعير من أخرى.
+
+## ذو صلة
+
+- [إضافة مساحة أسماء](/guides/add-a-namespace)
+- [بروتوكول اللغة](/packages/kernel/locale-protocol)
+- [الافتراضات والثوابت](/packages/kernel/defaults)

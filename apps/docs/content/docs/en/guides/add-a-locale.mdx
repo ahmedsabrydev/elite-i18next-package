@@ -1,0 +1,89 @@
+---
+title: Add a Locale
+description: Extend locales end to end, including catalogs, extraction, direction, and docs.
+---
+
+## Purpose
+
+The package ships `en` and `ar`. This guide adds a third locale (`fr`) to an application, covering the
+runtime config, catalogs, extractor, and direction.
+
+## Steps
+
+### 1. Update the runtime config
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar', 'fr'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs' },
+})
+```
+
+`locales` drives the redirect middleware, the Vite routing helpers, and `changeLocale`'s prefix regex.
+
+### 2. Add catalog directories
+
+```bash
+mkdir -p packages/i18n/catalogs/fr
+cp packages/i18n/catalogs/en/*.json packages/i18n/catalogs/fr/
+```
+
+Then translate the copies. Every namespace present for `en` must exist for `fr` or the parity test
+fails.
+
+### 3. Update the extractor
+
+```ts
+// i18next.config.ts
+export default defineConfig({
+  locales: ['en', 'ar', 'fr'],
+  // ...
+})
+```
+
+### 4. Regenerate and check
+
+```bash
+pnpm i18n:extract --ci --dry-run
+pnpm i18n:types
+pnpm i18n:status
+pnpm i18n:lint
+```
+
+### 5. Direction
+
+Nothing to do for a left-to-right locale: `dirFor('fr')` returns `'ltr'` because `fr` is not in
+`RTL_LOCALES`. For a right-to-left locale, add it to `RTL_LOCALES` in
+`packages/i18n/src/core/defaults.ts` (or reuse an existing RTL base) so `dirFor`, the Next
+`getHtmlAttributes`, and the provider snapshot all agree.
+
+## Docs Note
+
+The documentation app uses FumaDocs' own i18n. If you are documenting a new locale for a FumaDocs site,
+add it to the `i18n` definition, add a `content/docs/<locale>` tree, and ensure a parser and `dir`
+entry exist. This package intentionally does not render the docs.
+
+## Verification
+
+```bash
+pnpm --filter @faang/i18n exec vitest run src/__tests__/core/locale.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/catalogs/parity.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/next/middleware.test.ts
+```
+
+## Edge Cases
+
+- `resolveLocale` matches on the base subtag only, so `fr-CA` resolves to `fr` without extra config.
+- A locale present in `locales` but missing catalog files renders the fallback language. Shipping it
+  anyway degrades to English rather than crashing.
+- `fallbackLng` defaults to `defaultLocale`; set it explicitly if you want a partially translated
+  locale to borrow from another.
+
+## Related
+
+- [Add a Namespace](/guides/add-a-namespace)
+- [Locale Protocol](/packages/kernel/locale-protocol)
+- [Defaults and Constants](/packages/kernel/defaults)

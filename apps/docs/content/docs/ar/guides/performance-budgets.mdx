@@ -1,0 +1,81 @@
+---
+title: ميزانيات الأداء
+description: حدود gzip الدقيقة وكيفية فرضها وكيفية البقاء تحتها.
+---
+
+## الغرض
+
+تعامل الحزمة حجم الحزمة كميزة. وتُفرض ثلاث ميزانيات gzip عبر `pnpm budget` (وعبر `pnpm verify`)،
+وتعيش رابعة في الثابت `BUDGETS` للأدوات.
+
+## الأرقام
+
+| النطاق | الحد | المصدر | يفرضه |
+|---|---|---|---|
+| النواة (`dist/index.js`) | 12 KiB gzip | `BUDGETS.kernelGzipBytes` | `check-budget.mjs` |
+| كتالوجات القشرة (`common` + `errors`) | 12 KiB gzip | `BUDGETS.shellCatalogsGzipBytes` | `check-budget.mjs` |
+| أي كتالوج مساحة أسماء | 16 KiB gzip | `BUDGETS.namespaceGzipBytes` | `check-budget.mjs` |
+| البيان | 1536 بايت | `BUDGETS.manifestGzipBytes` | للأدوات فقط (لا يُفرض بعد) |
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+## تشغيلها
+
+```bash
+pnpm build
+pnpm budget
+```
+
+المخرجات المتوقعة عند البقاء ضمن الميزانية:
+
+```
+Budgets OK
+```
+
+وعند الفشل يخرج الأمر بالقيمة `1` ويطبع كل ملف مخالف، مثلاً:
+
+```
+Budget failures:
+  - en/dashboard.json 17842B > 16384B
+```
+
+## كيف تبقى تحتها
+
+- **النواة**: أبقِ نقطة الدخول الجذرية قابلة لهزّ الشجرة. تضبط الحزمة `sideEffects: false` وتفصل
+  زمن التشغيل الاختياري (React والمتاجر والمُهايئات) خلف مسارات فرعية كي يسقط غير المستخدم من الحزمة.
+- **القشرة**: يُحتسب `common.json` و`errors.json` فقط. أبقِهما لنصوص يحتاجها التطبيق كله عند أول
+  رسم؛ وانقل ما يخص مساراً إلى مساحة أسماء خاصة.
+- **مساحة الأسماء**: أبقِ المفاتيح قصيرة وتجنّب الجمل الطويلة المكررة، ونقل القوائم الكبيرة إلى شيفرة
+  حين لا تحتاج ترجمة.
+- **البيان**: مدخل صغير `{ hash, bytes }` لكل مساحة أسماء؛ ويكبر بعدد الكتالوجات لا بحجمها.
+
+## التحقق
+
+```bash
+pnpm budget
+pnpm verify
+```
+
+يشغّل `pnpm verify` الميزانية أخيراً بعد `pnpm build`، فيكون أصل النواة موجوداً.
+
+## الحالات الحدّية
+
+- يقرأ `check-budget.mjs` الملف `dist/index.js`؛ وإن شغّلته بلا بناء أولاً فأبلغ بـ
+  `dist/index.js missing — run build first` وفشل. ابنِ دائماً أولاً.
+- الميزانيات بوحدة gzip لا البايتات الخام، فقد تمرّ كتالوجات بالغة التكرار بسهولة. لا تفترض أن نجاح
+  الحجم الخام يعني نجاح gzip أو العكس.
+- يؤكد اختبار ميزانية النواة في `src/__tests__/budget/` الثابت؛ ويؤكد السكربت الأصل المبني. وكلاهما
+  مهم.
+
+## ذو صلة
+
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
+- [الاختبار](/guides/testing)
+- [نظرة عامة على المعمارية](/architecture/overview)

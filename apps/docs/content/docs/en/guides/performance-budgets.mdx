@@ -1,0 +1,83 @@
+---
+title: Performance Budgets
+description: The exact gzip limits, how they are enforced, and how to stay under them.
+---
+
+## Purpose
+
+The package treats bundle size as a feature. Three gzip budgets are enforced by
+`pnpm budget` (and by `pnpm verify`), and a fourth lives in the `BUDGETS` constant for tooling.
+
+## The Numbers
+
+| Scope | Limit | Source | Enforced by |
+|---|---|---|---|
+| Kernel (`dist/index.js`) | 12 KiB gzip | `BUDGETS.kernelGzipBytes` | `check-budget.mjs` |
+| Shell catalogs (`common` + `errors`) | 12 KiB gzip | `BUDGETS.shellCatalogsGzipBytes` | `check-budget.mjs` |
+| Any namespace catalog | 16 KiB gzip | `BUDGETS.namespaceGzipBytes` | `check-budget.mjs` |
+| Manifest | 1536 bytes | `BUDGETS.manifestGzipBytes` | tooling only (not yet enforced) |
+
+```ts
+export const BUDGETS = {
+  kernelGzipBytes: 12 * 1024,
+  shellCatalogsGzipBytes: 12 * 1024,
+  namespaceGzipBytes: 16 * 1024,
+  manifestGzipBytes: 1536,
+} as const
+```
+
+## Running It
+
+```bash
+pnpm build
+pnpm budget
+```
+
+Expected output when within budget:
+
+```
+Budgets OK
+```
+
+On failure the command exits `1` and prints each offending file, for example:
+
+```
+Budget failures:
+  - en/dashboard.json 17842B > 16384B
+```
+
+## How to Stay Under
+
+- **Kernel**: keep the root entry point tree-shakeable. The package sets `sideEffects: false` and
+  splits optional runtimes (React, stores, adapters) behind subpath exports so unused ones fall out of
+  the bundle.
+- **Shell**: only `common.json` and `errors.json` count. Keep them to strings the whole app needs on
+  first paint; move anything route-specific to its own namespace.
+- **Namespace**: keep keys short, avoid repeated long sentences, and pull large enums or lists into
+  code when they do not need translation.
+- **Manifest**: one small `{ hash, bytes }` entry per namespace; it scales with the count of catalogs,
+  not their size.
+
+## Verification
+
+```bash
+pnpm budget
+pnpm verify
+```
+
+`pnpm verify` runs budget last, after `pnpm build`, so the kernel artifact exists.
+
+## Edge Cases
+
+- `check-budget.mjs` reads `dist/index.js`; if you run it without building first, it reports
+  `dist/index.js missing — run build first` and fails. Always build first.
+- Budgets are gzip, not raw bytes, so highly repetitive catalogs may pass comfortably. Do not assume
+  a raw-size pass means a gzip pass, or vice versa.
+- The kernel budget test in `src/__tests__/budget/` asserts the constant; the script asserts the
+  built artifact. Both matter.
+
+## Related
+
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [Testing](/guides/testing)
+- [Architecture Overview](/architecture/overview)

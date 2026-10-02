@@ -1,0 +1,115 @@
+---
+title: الانتقال من i18next
+description: مقارنة جنباً إلى جنب من i18next وreact-i18next الخام إلى واجهة الحزمة.
+---
+
+## الغرض
+
+تلفّ هذه الحزمة i18next بدل استبداله. وإن كنت تستخدم i18next وreact-i18next بالفعل فالانتقال ميكانيكي
+غالباً: استبدل كتلة التهيئة والمُزوّد وتبديل اللغة، ووجّه المُحمّل إلى كتالوجاتك. ويبقى JSON والإدراج
+والجمع وصيغة `<Trans>` كما هي.
+
+## المقارنة
+
+| i18next الخام | هذه الحزمة | ملاحظات |
+|---|---|---|
+| `i18next.createInstance().use(initReactI18next).init(...)` | `createI18n(config)` | يُرجع `I18nRuntime`؛ و`runtime.instance` نسخة i18next |
+| `<I18nextProvider i18n={i18n}>` | `<I18nProvider runtime locale>` | يضيف بيانات اللغة والتنقّل |
+| `useTranslation(ns)` | `useT(ns)` | الدالة `t` نفسها، مربوطة باللغة الفعّالة |
+| `i18n.changeLanguage(lng)` | `useLocale().changeLocale(lng)` | يبدأ من المسار؛ انظر الملاحظة أدناه |
+| `i18n.language` | `useLocale().lng` | |
+| `i18n.dir()` | `useLocale().dir` أو `getHtmlAttributes(lng)` | |
+| `<Trans>` | `Trans` من `@faang/i18n/react` | الخصائص نفسها؛ وتُحقن `t` |
+| `HttpBackend` / `resources` | الخلفية المُدرَّجة + إعداد `catalogs` | ذاكرة، IndexedDB، استيراد ديناميكي، fetch |
+| `LanguageDetector` | `i18nMiddleware(runtime)` | الكوكي ثم `Accept-Language` ثم إعادة التوجيه |
+
+## قبل
+
+```ts
+import i18next from 'i18next'
+import { initReactI18next } from 'react-i18next'
+
+i18next.use(initReactI18next).init({
+  lng: 'en',
+  fallbackLng: 'en',
+  resources: { en: { common: enCommon }, ar: { common: arCommon } },
+  interpolation: { escapeValue: false },
+})
+```
+
+```tsx
+const { t, i18n } = useTranslation('common')
+i18n.changeLanguage('ar')
+```
+
+## بعد
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs', shared: '@faang/i18n/catalogs' },
+  numberingSystem: 'latn',
+  onEvent: (event) => report(event),
+})
+```
+
+```tsx
+import { useT, useLocale } from '@faang/i18n/react'
+
+const t = useT('common')
+const { changeLocale } = useLocale()
+changeLocale('ar')
+```
+
+```tsx
+<I18nProvider runtime={runtime} locale={lang} navigate={(href) => router.push(href)}>
+  <App />
+</I18nProvider>
+```
+
+## الفروق الجوهرية
+
+### اللغة تبدأ من المسار
+
+تكتب `changeLocale` المسار بدل تعديل حالة خفية، فيصيّر الخادم اللغة الجديدة في الطلب التالي. لا يوجد
+تبديل نصوص في المكان. وإن كنت تعتمد على `changeLanguage` لتحديث النصوص بلا تنقّل، فهذا الفرق السلوكي
+الوحيد الذي يجب التخطيط له.
+
+### التهريب مُفعَّل
+
+`interpolation.escapeValue` تساوي `true`. والإصلاح الشائع عند الانتقال هو التوقف عن تمرير HTML خام
+عبر `t()` واستخدام `Trans` للترميز بدلاً منه.
+
+### الكتالوجات تُجلب لا تُحزَّم
+
+بدل كائن `resources`، تصف مكان الكتالوجات (`catalogs.public` و`catalogs.shared` الاختياري) وتدع
+الخلفية المُدرَّجة تحمّلها. وتُحمَّل مساحات الأسماء بتكاسل، وهذا ما يُبقي أول رسم صغيراً.
+
+### الأحداث تُغني عن التخمين
+
+وصّل `onEvent` لاستقبال `ns.load` و`ns.cache_hit` و`ns.timeout`. واستخدمه للتأكد من عمل المُحمّل أثناء
+الانتقال.
+
+## الترتيب الموصى به
+
+1. أضف `createI18n` وركّب `I18nProvider`؛ وأبقِ استدعاءات `t` قائمة عبر `useT`.
+2. وجّه `catalogs.public` إلى JSON وتأكد من تحميل مساحة أسماء (راقب `ns.load`).
+3. استبدل `changeLanguage` بـ `changeLocale` وأضف وسيطة إعادة التوجيه.
+4. شغّل التجاهل على نمط `apps/docs` في `i18next.config.ts` إن وُجدت أدلة لا يجب فحصها.
+5. شغّل `pnpm i18n:extract` و`pnpm i18n:status` و`pnpm i18n:lint`.
+
+## السلوك والحالات الحدّية
+
+- يستخدم `createI18n` الخيار `initImmediate: false`، فيكون `t()` قابلاً للاستخدام متزامناً؛ ولا حاجة
+  لانتظار `i18next.on('initialized')`.
+- يأخذ `fallbackLng` افتراضياً `defaultLocale`، مطابقاً لإعداد i18next المعتاد.
+- يظل بإمكانك الوصول إلى النسخة الأساسية عبر `runtime.instance` لحالة غير مغلّفة.
+
+## ذو صلة
+
+- [المفاهيم الأساسية](/getting-started/core-concepts)
+- [البدء السريع](/getting-started/quick-start)
+- [إضافة لغة](/guides/add-a-locale)

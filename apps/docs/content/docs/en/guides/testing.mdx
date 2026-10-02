@@ -1,0 +1,95 @@
+---
+title: Testing
+description: The Vitest layout, the commands that work in this monorepo, and the patterns to mirror.
+---
+
+## Purpose
+
+The package and both contract apps are tested with Vitest. This guide covers how to run tests and
+which patterns to copy when you add your own.
+
+## Commands
+
+```bash
+# whole workspace (turbo fan-out)
+pnpm test
+
+# one package
+pnpm --filter @faang/i18n test
+
+# one file (note: --filter does not pass args through)
+pnpm --filter @faang/i18n exec vitest run src/__tests__/loader/inflight.test.ts
+
+# watch mode
+pnpm --filter @faang/i18n exec vitest
+```
+
+> `pnpm --filter @faang/i18n test -- <name>` does **not** filter by name. Use `exec vitest run <path>`
+> for a single file.
+
+## Test Layout
+
+| Directory | Covers |
+|---|---|
+| `src/__tests__/core/` | `createI18n`, `resolveLocale`, prefetch behavior |
+| `src/__tests__/cache/` | `LruCache` |
+| `src/__tests__/loader/` | memory, persistent, inflight, backend, chunk loading, package specifiers |
+| `src/__tests__/catalogs/` | en/ar parity across all namespaces |
+| `src/__tests__/budget/` | kernel gzip budget |
+| `src/__tests__/react/` | provider + hooks |
+| `src/__tests__/next/` | middleware decisions, html attributes |
+| `src/__tests__/vite/` | plugin output, route helpers |
+| `apps/next-web/src/__tests__/` | server locale resolution |
+| `apps/vite-web/src/__tests__/` | locale guard/route behavior |
+
+## Patterns to Mirror
+
+### Loader tests
+
+Use an injected `NamespaceLoader` rather than the network, and assert on the tier behavior:
+
+```ts
+const backend = new TieredBackend({
+  config: resolved,
+  loader: async (lng, ns) => (ns === 'common' ? { hello: 'Hi' } : undefined),
+})
+await backend.load('en', 'common')
+expect(backend.has('en', 'common')).toBe(true)
+// a second load must be served from memory
+```
+
+### Provider tests
+
+Render with `I18nProvider`, then assert via `useT`/`useLocale`. Test that a missing provider throws,
+and that `changeLocale` builds the expected path.
+
+### Falsification over assertion
+
+A good test here proves a failure mode: a 404 namespace resolves `undefined`; a timeout emits
+`ns.timeout` and resolves `undefined`; hostile `Accept-Language` falls back to the default.
+
+## Verification
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm verify
+```
+
+`pnpm verify` is the full gate: typecheck, test, `i18n:extract --ci --dry-run`, `i18n:status`,
+`i18n:lint`, build, and budget.
+
+## Edge Cases
+
+- Tests run with Vitest's default node environment; React tests use the jsdom environment configured
+  for the react test glob. Check `vitest.config.ts` before adding a nested config.
+- Persistent-store tests stub or skip IndexedDB; the store is designed to no-op when `indexedDB` is
+  undefined.
+- Budget tests depend on a prior build only where they read `dist/`; the kernel test asserts the
+  constant, not the artifact.
+
+## Related
+
+- [Performance Budgets](/guides/performance-budgets)
+- [Add a Namespace](/guides/add-a-namespace)
+- [TieredBackend](/packages/loader/backend)

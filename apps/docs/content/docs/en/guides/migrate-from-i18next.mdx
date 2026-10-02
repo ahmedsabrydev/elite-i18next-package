@@ -1,0 +1,116 @@
+---
+title: Migrate from i18next
+description: A side-by-side mapping from raw i18next and react-i18next to the wrapped API.
+---
+
+## Purpose
+
+This package wraps i18next rather than replacing it. If you already use i18next and react-i18next, the
+migration is mostly mechanical: replace the init block, the provider, and the locale switch, and point
+the loader at your catalogs. Your JSON, interpolation, plurals, and `<Trans>` syntax stay the same.
+
+## Mapping
+
+| Raw i18next | This package | Notes |
+|---|---|---|
+| `i18next.createInstance().use(initReactI18next).init(...)` | `createI18n(config)` | returns an `I18nRuntime`; `runtime.instance` is the i18next instance |
+| `<I18nextProvider i18n={i18n}>` | `<I18nProvider runtime locale>` | adds locale metadata and navigation |
+| `useTranslation(ns)` | `useT(ns)` | same `t`, bound to the active locale |
+| `i18n.changeLanguage(lng)` | `useLocale().changeLocale(lng)` | URL-first; see caveat below |
+| `i18n.language` | `useLocale().lng` | |
+| `i18n.dir()` | `useLocale().dir` or `getHtmlAttributes(lng)` | |
+| `<Trans>` | `Trans` from `@faang/i18n/react` | same props; `t` is injected |
+| `HttpBackend` / `resources` | tiered backend + `catalogs` config | memory, IndexedDB, dynamic import, fetch |
+| `LanguageDetector` | `i18nMiddleware(runtime)` | cookie then `Accept-Language`, then redirect |
+
+## Before
+
+```ts
+import i18next from 'i18next'
+import { initReactI18next } from 'react-i18next'
+
+i18next.use(initReactI18next).init({
+  lng: 'en',
+  fallbackLng: 'en',
+  resources: { en: { common: enCommon }, ar: { common: arCommon } },
+  interpolation: { escapeValue: false },
+})
+```
+
+```tsx
+const { t, i18n } = useTranslation('common')
+i18n.changeLanguage('ar')
+```
+
+## After
+
+```ts
+import { createI18n } from '@faang/i18n'
+
+export const runtime = createI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { public: '/catalogs', shared: '@faang/i18n/catalogs' },
+  numberingSystem: 'latn',
+  onEvent: (event) => report(event),
+})
+```
+
+```tsx
+import { useT, useLocale } from '@faang/i18n/react'
+
+const t = useT('common')
+const { changeLocale } = useLocale()
+changeLocale('ar')
+```
+
+```tsx
+<I18nProvider runtime={runtime} locale={lang} navigate={(href) => router.push(href)}>
+  <App />
+</I18nProvider>
+```
+
+## Key Differences
+
+### Locale is URL-first
+
+`changeLocale` rewrites the URL rather than mutating a hidden state, so the server renders the new
+locale on the next request. There is no in-place string swap. If you relied on `changeLanguage`
+updating strings without navigation, this is the one behavioral change to plan for.
+
+### Escaping is on
+
+`interpolation.escapeValue` is `true`. The common migration fix is to stop passing raw HTML through
+`t()` and use `Trans` for markup instead.
+
+### Catalogs are fetched, not bundled
+
+Instead of a `resources` object, you describe where catalogs live (`catalogs.public`, optional
+`catalogs.shared`) and let the tiered backend load them. Namespaces load lazily, which is what keeps
+first paint small.
+
+### Events replace guesswork
+
+Wire `onEvent` to receive `ns.load`, `ns.cache_hit`, and `ns.timeout`. Use it to confirm the loader is
+working during the migration.
+
+## Recommended Order
+
+1. Add `createI18n` and mount `I18nProvider`; keep your existing `t` calls working through `useT`.
+2. Point `catalogs.public` at your JSON and verify a namespace loads (watch `ns.load`).
+3. Replace `changeLanguage` with `changeLocale` and add the redirect middleware.
+4. Turn on `apps/docs`-style ignores in `i18next.config.ts` if any directories should not be scanned.
+5. Run `pnpm i18n:extract`, `pnpm i18n:status`, and `pnpm i18n:lint`.
+
+## Behavior and Edge Cases
+
+- `createI18n` uses `initImmediate: false`, so `t()` is usable synchronously; there is no
+  `i18next.on('initialized')` await.
+- `fallbackLng` defaults to `defaultLocale`, matching the usual i18next setup.
+- You can still reach the underlying instance via `runtime.instance` for anything not wrapped.
+
+## Related
+
+- [Core Concepts](/getting-started/core-concepts)
+- [Quick Start](/getting-started/quick-start)
+- [Add a Locale](/guides/add-a-locale)

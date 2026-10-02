@@ -1,0 +1,95 @@
+---
+title: الاختبار
+description: تخطيط Vitest والأوامر التي تعمل في هذا المستودع أحادي الشجرة والأنماط التي تُحاكى.
+---
+
+## الغرض
+
+تُختبر الحزمة والتطبيقات التعاقدية كلها بـ Vitest. يغطي هذا الدليل كيفية تشغيل الاختبارات والأنماط
+التي تُنسخ عند إضافة اختباراتك.
+
+## الأوامر
+
+```bash
+# كامل مساحة العمل (تفريع turbo)
+pnpm test
+
+# حزمة واحدة
+pnpm --filter @faang/i18n test
+
+# ملف واحد (لاحظ أن --filter لا يمرّر الوسائط)
+pnpm --filter @faang/i18n exec vitest run src/__tests__/loader/inflight.test.ts
+
+# وضع المراقبة
+pnpm --filter @faang/i18n exec vitest
+```
+
+> `pnpm --filter @faang/i18n test -- <name>` **لا** يرشّح بالاسم. استخدم `exec vitest run <path>`
+> لملف واحد.
+
+## تخطيط الاختبارات
+
+| الدليل | يغطي |
+|---|---|
+| `src/__tests__/core/` | `createI18n` و`resolveLocale` وسلوك الجلب المسبق |
+| `src/__tests__/cache/` | `LruCache` |
+| `src/__tests__/loader/` | الذاكرة والدائم والمتزامن والخلفية وتحميل القطع ومُحدِّدات الحزمة |
+| `src/__tests__/catalogs/` | تطابق en/ar عبر كل مساحات الأسماء |
+| `src/__tests__/budget/` | ميزانية gzip للنواة |
+| `src/__tests__/react/` | المُزوّد والخطافات |
+| `src/__tests__/next/` | قرارات الوسيطة وسمات html |
+| `src/__tests__/vite/` | مخرجات الإضافة ومساعدات التوجيه |
+| `apps/next-web/src/__tests__/` | حسم لغة الخادم |
+| `apps/vite-web/src/__tests__/` | سلوك حارس/مسار اللغة |
+
+## أنماط تُحاكى
+
+### اختبارات المُحمّل
+
+استخدم `NamespaceLoader` محقوناً بدل الشبكة، وتحقق من سلوك الطبقات:
+
+```ts
+const backend = new TieredBackend({
+  config: resolved,
+  loader: async (lng, ns) => (ns === 'common' ? { hello: 'Hi' } : undefined),
+})
+await backend.load('en', 'common')
+expect(backend.has('en', 'common')).toBe(true)
+// التحميل الثاني يجب أن يُخدَم من الذاكرة
+```
+
+### اختبارات المُزوّد
+
+صيّر بـ `I18nProvider`، ثم تحقق عبر `useT`/`useLocale`. واختبر أن غياب المُزوّد يرمي، وأن
+`changeLocale` تبني المسار المتوقع.
+
+### التفنيد قبل التأكيد
+
+الاختبار الجيد هنا يُثبت نمط فشل: مساحة أسماء 404 تُحسم إلى `undefined`؛ ومهلة تُصدر `ns.timeout`
+وتُحسم إلى `undefined`؛ و`Accept-Language` خبيثة ترجع إلى الافتراضية.
+
+## التحقق
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm verify
+```
+
+`pnpm verify` هو البوابة الكاملة: typecheck وtest و`i18n:extract --ci --dry-run` و`i18n:status`
+و`i18n:lint` وbuild وbudget.
+
+## الحالات الحدّية
+
+- تعمل الاختبارات ببيئة node الافتراضية في Vitest؛ وتستخدم اختبارات React بيئة jsdom المضبوطة لنمط
+  اختبار react. راجع `vitest.config.ts` قبل إضافة إعداد متداخل.
+- تتجاوز اختبارات المخزن الدائم IndexedDB أو تُحاكيه؛ فالمخزن مصمّم ليكون بلا أثر عند غياب
+  `indexedDB`.
+- تعتمد اختبارات الميزانية على بناء سابق فقط حيث تقرأ `dist/`؛ أما اختبار النواة فيؤكد الثابت لا
+  الأصل المبني.
+
+## ذو صلة
+
+- [ميزانيات الأداء](/guides/performance-budgets)
+- [إضافة مساحة أسماء](/guides/add-a-namespace)
+- [TieredBackend](/packages/loader/backend)

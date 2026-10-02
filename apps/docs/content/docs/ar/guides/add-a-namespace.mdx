@@ -1,0 +1,96 @@
+---
+title: إضافة مساحة أسماء
+description: أنشئ كتالوجاً جديداً في اللغتين، واستخرجه، وسجّله، وحمّله بتكاسل.
+---
+
+## الغرض
+
+مساحة الأسماء ملف JSON واحد لكل لغة. يضيف هذا الدليل مساحة أسماء منتج (`dashboard`) إلى كتالوجات
+الحزمة نفسها. وتنطبق الخطوات ذاتها على تطبيق يملك كتالوجاته.
+
+## الخطوات
+
+### 1. استخدم مساحة الأسماء في المصدر
+
+أشِر إلى المفاتيح عبر الخطاف الغلافي مع تمرير مساحة الأسماء كأول وسيط:
+
+```tsx
+import { useT } from '@faang/i18n/react'
+
+export function Dashboard() {
+  const t = useT('dashboard')
+  return <h1>{t('title', { defaultValue: 'Dashboard' })}</h1>
+}
+```
+
+### 2. استخرج كتالوجات فارغة
+
+```bash
+pnpm i18n:extract
+```
+
+النتيجة المتوقعة: وجود `packages/i18n/catalogs/en/dashboard.json` و
+`packages/i18n/catalogs/ar/dashboard.json`. ويحتوي الملف الإنجليزي المفاتيح المستخرجة (أو قيم
+`defaultValue` حسب الإعداد)، ويعكس العربي البنية نفسها.
+
+### 3. املأ اللغتين
+
+حرّر الملفين ليتطابقا في المفاتيح:
+
+```json
+// catalogs/en/dashboard.json
+{ "title": "Dashboard" }
+```
+
+```json
+// catalogs/ar/dashboard.json
+{ "title": "لوحة التحكم" }
+```
+
+### 4. أعد توليد الأنواع
+
+```bash
+pnpm i18n:types
+pnpm i18n:status
+```
+
+يخرج `status` بالقيمة صفر عندما تتفق اللغتان؛ وتُسرد الاختلافات عند غير ذلك.
+
+### 5. حمّلها بتكاسل
+
+لا تُضف مساحة الأسماء إلى القشرة. حمّلها عندما يحتاجها المسار:
+
+```ts
+// مكوّن خادم في Next
+const route = defineRouteI18n({ runtime, ns: ['dashboard'] })
+await route.load(lang)
+```
+
+```ts
+// أو الجلب المسبق في العميل
+runtime.prefetch(locale, 'dashboard')
+```
+
+## التحقق
+
+```bash
+pnpm --filter @faang/i18n exec vitest run src/__tests__/catalogs/parity.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/budget/kernel.test.ts
+```
+
+يفشل اختبار التطابق إن نقص مفتاح في إحدى اللغتين؛ ويفشل اختبار الميزانية إن دفع الكتالوج الجديد مساحة
+أسماء فوق 16 KiB gzip.
+
+## الحالات الحدّية
+
+- يفضّل أن تطابق معرّفات مساحات الأسماء `NS_ID_PATTERN` (`/^[a-z][a-zA-Z0-9]*$/`) كي تعتمد عليها
+  الأدوات؛ والنواة نفسها لا تفرض النمط وقت التشغيل.
+- إن أضفت مساحة الأسماء إلى `SHELL_NAMESPACES` احتُسبت أيضاً في ميزانية القشرة 12 KiB. فضّل التحميل
+  المتكاسل لكل ما يخص المنتج.
+- مساحة الأسماء بلا ملفات كتالوج تُحسم إلى `undefined` وتُصيّر اللغة الاحتياطية؛ ولا ترمي.
+
+## ذو صلة
+
+- [إضافة لغة](/guides/add-a-locale)
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
+- [بروتوكول الكتالوج](/architecture/catalog-protocol)

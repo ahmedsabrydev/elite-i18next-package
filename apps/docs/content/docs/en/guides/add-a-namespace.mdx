@@ -1,0 +1,97 @@
+---
+title: Add a Namespace
+description: Create a new catalog in both locales, extract it, register it, and load it lazily.
+---
+
+## Purpose
+
+A namespace is one JSON file per locale. This guide adds a product namespace (`dashboard`) to the
+package's own catalogs. The same steps apply to an app that owns its catalogs.
+
+## Steps
+
+### 1. Use the namespace in source
+
+Reference keys through the wrapper hook with the namespace as the first argument:
+
+```tsx
+import { useT } from '@faang/i18n/react'
+
+export function Dashboard() {
+  const t = useT('dashboard')
+  return <h1>{t('title', { defaultValue: 'Dashboard' })}</h1>
+}
+```
+
+### 2. Extract empty catalogs
+
+```bash
+pnpm i18n:extract
+```
+
+Expected result: `packages/i18n/catalogs/en/dashboard.json` and
+`packages/i18n/catalogs/ar/dashboard.json` now exist. The English file contains the extracted keys (or
+your `defaultValue`s depending on config), and the Arabic file mirrors the structure.
+
+### 3. Fill both locales
+
+Edit both files so they have the same keys:
+
+```json
+// catalogs/en/dashboard.json
+{ "title": "Dashboard" }
+```
+
+```json
+// catalogs/ar/dashboard.json
+{ "title": "لوحة التحكم" }
+```
+
+### 4. Regenerate types
+
+```bash
+pnpm i18n:types
+pnpm i18n:status
+```
+
+`status` exits zero when both locales agree; non-zero lists the drift.
+
+### 5. Load it lazily
+
+Do not add the namespace to the shell. Load it when the route needs it:
+
+```ts
+// Next server component
+const route = defineRouteI18n({ runtime, ns: ['dashboard'] })
+await route.load(lang)
+```
+
+```ts
+// or prefetch on the client
+runtime.prefetch(locale, 'dashboard')
+```
+
+## Verification
+
+```bash
+pnpm --filter @faang/i18n exec vitest run src/__tests__/catalogs/parity.test.ts
+pnpm --filter @faang/i18n exec vitest run src/__tests__/budget/kernel.test.ts
+```
+
+The parity test fails if one locale is missing a key; the budget test fails if the new catalog pushes
+a namespace past 16 KiB gzip.
+
+## Edge Cases
+
+- Namespace ids should match the `NS_ID_PATTERN` (`/^[a-z][a-zA-Z0-9]*$/`) so tooling can rely on
+  them; the kernel itself does not enforce the pattern at runtime.
+- If you add the namespace to `SHELL_NAMESPACES`, it also counts toward the 12 KiB shell budget. Prefer
+  lazy loading for anything product-specific.
+- A namespace with no catalog files resolves `undefined` and renders the fallback language; it does not
+  throw.
+
+## Related
+
+- [Add a Locale](/guides/add-a-locale)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)
+- [Catalog Protocol](/architecture/catalog-protocol)
