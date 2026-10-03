@@ -1,0 +1,172 @@
+---
+title: خريطة الملفات
+description: كل ملف مصدري متعقَّب مع غرضه في سطر واحد، مجمّعاً حسب المجال.
+---
+
+يعدّد هذا الملحق كل ملف يتعقّبه Git، باستثناء الأنواع المولَّدة وملف القفل وملفَّي `next-env.d.ts`
+المُحاكيين ومحتوى التوثيق نفسه (الذي يفهرسه هذا الملف). ويفرضه
+`apps/docs/scripts/check-file-map.mjs`.
+
+## إعداد الجذر
+
+- `package.json` — سكربتات مساحة العمل (`verify` و`i18n:*`) واعتماديات الجذر.
+- `pnpm-workspace.yaml` — يعلن مساحتي العمل `packages/*` و`apps/*`.
+- `turbo.json` — مخطط مهام Turborepo للبناء والاختبار وفحص الأنواع والميزانية.
+- `tsconfig.base.json` — خيارات مُصرِّف TypeScript المشتركة التي توسّعها كل مساحة عمل.
+- `i18next.config.ts` — استخراج i18next-cli وأنماط التجاهل ومخرَج الأنواع.
+- `.gitignore` — مخرجات البناء والذاكرات المؤقتة و`.superpowers/` المتجاهَلة.
+- `.github/workflows/ci.yml` — خط CI الذي يشغّل `pnpm verify`.
+
+## مصادر الحزمة (`packages/i18n`)
+
+### المدخل والإعداد
+
+- `packages/i18n/package.json` — اسم الحزمة وخريطة المسارات الفرعية والسكربتات.
+- `packages/i18n/tsup.config.ts` — إعداد الحزم عبر esbuild/tsup.
+- `packages/i18n/vitest.config.ts` — مشاريع Vitest لاختبارات node وjsdom.
+- `packages/i18n/tsconfig.json` — مشروع TypeScript للحزمة.
+- `packages/i18n/scripts/check-budget.mjs` — بوابة ميزانية gzip للنواة والكتالوجات.
+
+### النواة (`core/`)
+
+- `packages/i18n/src/index.ts` — نقطة الدخول الجذرية؛ تعيد تصدير سطح النواة.
+- `packages/i18n/src/core/create-i18n.ts` — `createI18n`، مُنشئ زمن التشغيل.
+- `packages/i18n/src/core/resolve-config.ts` — `resolveConfig` و`loaderDefaults`.
+- `packages/i18n/src/core/defaults.ts` — `BUDGETS` و`LOADER` ومجموعات اللغات والأنماط.
+- `packages/i18n/src/core/locale.ts` — `resolveLocale` و`dirFor` و`assertSupportedLocale`.
+- `packages/i18n/src/core/types.ts` — كل الأنواع العامة، بما فيها `I18nRuntime`.
+
+### التخزين المؤقت والمُحمّل (`cache/` و`loader/`)
+
+- `packages/i18n/src/cache/lru.ts` — `LruCache`، ذاكرة الأحدث استخداماً المحدودة.
+- `packages/i18n/src/loader/memory.ts` — `MemoryStore`، الطبقة الدافئة.
+- `packages/i18n/src/loader/persistent.ts` — `PersistentStore`، طبقة IndexedDB.
+- `packages/i18n/src/loader/inflight.ts` — `InflightLoader` و`TimeoutError`.
+- `packages/i18n/src/loader/backend.ts` — `namespaceChunkLoader` و`TieredBackend`.
+
+### المراقبة والكتالوجات والواجهة (`obs/` و`catalogs/` و`cli/`)
+
+- `packages/i18n/src/obs/events.ts` — `emit`، موزّع الأحداث الذي يبتلع الأخطاء.
+- `packages/i18n/src/catalogs/index.ts` — `SHARED_NAMESPACES` و`SHELL_NAMESPACES`.
+- `packages/i18n/src/cli/index.ts` — `CLI_PACKAGE` و`CLI_VERSION` و`CLI_COMMANDS`.
+
+### React (`react/`)
+
+- `packages/i18n/src/react/index.ts` — نقطة دخول `/react`.
+- `packages/i18n/src/react/provider.tsx` — `I18nProvider` و`I18nProviderProps`.
+- `packages/i18n/src/react/hooks.ts` — `useT` و`useLocale` و`useI18nRuntime`.
+- `packages/i18n/src/react/trans.tsx` — `Trans` مع `t` محقونة.
+- `packages/i18n/src/react/context.ts` — `I18nContext` و`I18nContextValue` و`LocaleSnapshot`.
+
+### Next.js (`next/`)
+
+- `packages/i18n/src/next/index.ts` — نقطة دخول `/next`.
+- `packages/i18n/src/next/middleware.ts` — `i18nMiddleware` و`localeStaticParams` و`DEFAULT_COOKIE`.
+- `packages/i18n/src/next/server.ts` — `createI18nServer` و`defineRouteI18n`.
+- `packages/i18n/src/next/html.ts` — `getHtmlAttributes`.
+
+### Vite (`vite/`)
+
+- `packages/i18n/src/vite/index.ts` — نقطة دخول `/vite`.
+- `packages/i18n/src/vite/plugin.ts` — `i18nVitePlugin` وأنواع البيان.
+- `packages/i18n/src/vite/routes.ts` — `localePrefix` و`matchLocaleFromPath` و`resolveLocaleOrNull`.
+
+### المتاجر والهياكل (`store/` و`stubs/`)
+
+- `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` و`LocaleStore`.
+- `packages/i18n/src/store/redux.ts` — `localeSlice` والإجراءات والمحددات.
+- `packages/i18n/src/stubs/native.ts` — `createNativeI18n` (يرمي حتى v1.1).
+- `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (يرمي حتى v1.2).
+- `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (يرمي حتى v1.3).
+
+### الأنواع المولَّدة
+
+- `packages/i18n/src/@types/i18next.d.ts` — توسيع `CustomTypeOptions` في i18next.
+- `packages/i18n/src/@types/resources.d.ts` — شجرة المفاتيح المولَّدة لـ `t()` المُنمَّطة.
+
+## الاختبارات
+
+- `packages/i18n/src/__tests__/core/create-i18n.test.ts` — إنشاء زمن التشغيل والافتراضات.
+- `packages/i18n/src/__tests__/core/locale.test.ts` — تحليل اللغة والاتجاه.
+- `packages/i18n/src/__tests__/core/prefetch.test.ts` — سلوك الجلب المسبق وإزالة التكرار.
+- `packages/i18n/src/__tests__/cache/lru.test.ts` — السعة وترتيب الإزالة.
+- `packages/i18n/src/__tests__/loader/memory.test.ts` — الطبقة الدافئة.
+- `packages/i18n/src/__tests__/loader/persistent.test.ts` — طبقة IndexedDB والرجوع بلا أثر.
+- `packages/i18n/src/__tests__/loader/inflight.test.ts` — إزالة التكرار والمهلة وإعادة المحاولة.
+- `packages/i18n/src/__tests__/loader/backend.test.ts` — ترتيب الطبقات والأحداث.
+- `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — حسم `namespaceChunkLoader`.
+- `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — المُحدِّدات المشتركة/الحزمية.
+- `packages/i18n/src/__tests__/catalogs/parity.test.ts` — تطابق مفاتيح en/ar والميزانيات.
+- `packages/i18n/src/__tests__/budget/kernel.test.ts` — ثابت ميزانية النواة.
+- `packages/i18n/src/__tests__/react/provider.test.tsx` — المُزوّد والخطافات.
+- `packages/i18n/src/__tests__/next/middleware.test.ts` — قرارات إعادة التوجيه.
+- `packages/i18n/src/__tests__/next/html.test.ts` — `getHtmlAttributes`.
+- `packages/i18n/src/__tests__/vite/plugin.test.ts` — فحص البيان وإصداره.
+- `packages/i18n/src/__tests__/vite/routes.test.ts` — مساعدات التوجيه.
+- `packages/i18n/src/__tests__/types/keys.test-d.ts` — فحوصات أنواع المفاتيح وقت الترجمة.
+
+## الكتالوجات
+
+- `packages/i18n/catalogs/en/common.json` — نصوص القشرة الإنجليزية المشتركة بين كل تطبيق.
+- `packages/i18n/catalogs/en/errors.json` — نصوص الأخطاء الإنجليزية للقشرة.
+- `packages/i18n/catalogs/en/auth.json` — نصوص المصادقة الإنجليزية (كسولة).
+- `packages/i18n/catalogs/en/validation.json` — نصوص التحقق الإنجليزية (كسولة).
+- `packages/i18n/catalogs/en/datetime.json` — نصوص التاريخ/الوقت الإنجليزية (كسولة).
+- `packages/i18n/catalogs/ar/common.json` — نصوص القشرة العربية.
+- `packages/i18n/catalogs/ar/errors.json` — نصوص الأخطاء العربية للقشرة.
+- `packages/i18n/catalogs/ar/auth.json` — نصوص المصادقة العربية (كسولة).
+- `packages/i18n/catalogs/ar/validation.json` — نصوص التحقق العربية (كسولة).
+- `packages/i18n/catalogs/ar/datetime.json` — نصوص التاريخ/الوقت العربية (كسولة).
+
+## التطبيق التعاقدي: next-web
+
+- `apps/next-web/package.json` — سكربتات التطبيق واعتمادياته.
+- `apps/next-web/next.config.ts` — إعداد Next للتطبيق التعاقدي.
+- `apps/next-web/tsconfig.json` — مشروع TypeScript للتطبيق.
+- `apps/next-web/src/i18n.ts` — توصيل زمن التشغيل والخلفية الساكنة.
+- `apps/next-web/src/proxy.ts` — وسيطة تُكيِّف `i18nMiddleware` مع `NextResponse`.
+- `apps/next-web/src/app/[lng]/layout.tsx` — التخطيط الجذري يضبط `lang`/`dir` ويحمّل القشرة.
+- `apps/next-web/src/app/[lng]/page.tsx` — مكوّن خادم يترجم عبر `getT`.
+- `apps/next-web/src/__tests__/server-locale.test.ts` — تأكيدات سمات html مانعة الوميض.
+
+## التطبيق التعاقدي: vite-web
+
+- `apps/vite-web/package.json` — سكربتات التطبيق واعتمادياته.
+- `apps/vite-web/vite.config.ts` — إعداد Vite مع React وإضافة i18n.
+- `apps/vite-web/vitest.setup.ts` — تهيئة اختبار jsdom.
+- `apps/vite-web/tsconfig.json` — مشروع TypeScript للتطبيق.
+- `apps/vite-web/index.html` — هيكل HTML لتطبيق الصفحة الواحدة.
+- `apps/vite-web/src/main.tsx` — جذر React وتركيب الموجّه.
+- `apps/vite-web/src/routes.tsx` — جدول المسارات مع `LocaleGuard`.
+- `apps/vite-web/src/locale-guard.tsx` — حارس منع الوميض في CSR.
+- `apps/vite-web/src/i18n.ts` — توصيل زمن التشغيل والخلفية الساكنة.
+- `apps/vite-web/src/pages/Home.tsx` — الصفحة الرئيسية باستخدام `I18nProvider` و`useT`.
+- `apps/vite-web/src/pages/Settings.tsx` — صفحة الإعدادات باستخدام `useLocale` و`changeLocale`.
+- `apps/vite-web/src/__tests__/locale-guard.test.tsx` — حالات تصيير الحارس.
+
+## تطبيق التوثيق: apps/docs
+
+- `apps/docs/package.json` — سكربتات تطبيق التوثيق (`dev` و`build` و`test` و`typecheck`).
+- `apps/docs/next.config.mjs` — إعداد Next ملفوف بـ `createMDX`.
+- `apps/docs/postcss.config.mjs` — خط PostCSS الخاص بـ Tailwind.
+- `apps/docs/tsconfig.json` — مشروع TypeScript لتطبيق التوثيق.
+- `apps/docs/README.md` — كيفية تشغيل تطبيق التوثيق.
+- `apps/docs/proxy.ts` — وسيطة i18n في FumaDocs.
+- `apps/docs/lib/i18n.ts` — تعريف اللغات عبر `defineI18n` (en/ar).
+- `apps/docs/lib/dir.ts` — مساعد `dirFor` لموقع التوثيق.
+- `apps/docs/lib/source.ts` — مُحمّل ومصدر FumaDocs.
+- `apps/docs/lib/layout.shared.tsx` — خيارات التخطيط المشتركة والترجمات.
+- `apps/docs/components/mdx.tsx` — سجل مكوّنات MDX بما فيه `AutoTypeTable`.
+- `apps/docs/app/[lang]/layout.tsx` — التخطيط الجذري للغتين.
+- `apps/docs/app/[lang]/[[...slug]]/page.tsx` — مُصيّر صفحات MDX.
+- `apps/docs/app/api/search/route.ts` — مسار واجهة البحث i18n.
+- `apps/docs/app/global.css` — الأنماط العامة وتجاوزات RTL.
+- `apps/docs/scripts/check-parity.mjs` — مدقّق تطابق صفحات en/ar.
+- `apps/docs/scripts/check-rtl.mjs` — مدقّق اتجاه HTML المبني.
+- `apps/docs/scripts/check-file-map.mjs` — مدقّق التغطية هذا.
+
+## ذو صلة
+
+- [فهرس واجهة البرمجة](/appendix/api-index)
+- [المصطلحات](/appendix/glossary)
+- [استكشاف الأخطاء](/appendix/troubleshooting)

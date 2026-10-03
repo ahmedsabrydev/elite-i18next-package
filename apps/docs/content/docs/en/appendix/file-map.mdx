@@ -1,0 +1,172 @@
+---
+title: File Map
+description: Every tracked source file with a one-line purpose, grouped by area.
+---
+
+This appendix enumerates every file tracked by Git, excluding generated types, the lockfile, the
+`next-env.d.ts` shims, and the documentation content itself (which this page indexes). It is enforced
+by `apps/docs/scripts/check-file-map.mjs`.
+
+## Root Configuration
+
+- `package.json` — workspace scripts (`verify`, `i18n:*`) and root dependencies.
+- `pnpm-workspace.yaml` — declares the `packages/*` and `apps/*` workspaces.
+- `turbo.json` — Turborepo task graph for build, test, typecheck, and budget.
+- `tsconfig.base.json` — shared TypeScript compiler options extended by every workspace.
+- `i18next.config.ts` — i18next-cli extraction, ignore globs, and type output.
+- `.gitignore` — ignored build output, caches, and `.superpowers/`.
+- `.github/workflows/ci.yml` — the CI pipeline that runs `pnpm verify`.
+
+## Package Sources (`packages/i18n`)
+
+### Entry and Config
+
+- `packages/i18n/package.json` — package name, subpath exports map, and scripts.
+- `packages/i18n/tsup.config.ts` — the esbuild/tsup bundling configuration.
+- `packages/i18n/vitest.config.ts` — Vitest projects for node and jsdom tests.
+- `packages/i18n/tsconfig.json` — package TypeScript project.
+- `packages/i18n/scripts/check-budget.mjs` — gzip budget gate for the kernel and catalogs.
+
+### Kernel (`core/`)
+
+- `packages/i18n/src/index.ts` — the root entry point; re-exports the kernel surface.
+- `packages/i18n/src/core/create-i18n.ts` — `createI18n`, the runtime constructor.
+- `packages/i18n/src/core/resolve-config.ts` — `resolveConfig` and `loaderDefaults`.
+- `packages/i18n/src/core/defaults.ts` — `BUDGETS`, `LOADER`, locale sets, and patterns.
+- `packages/i18n/src/core/locale.ts` — `resolveLocale`, `dirFor`, `assertSupportedLocale`.
+- `packages/i18n/src/core/types.ts` — every public type, including `I18nRuntime`.
+
+### Cache and Loader (`cache/`, `loader/`)
+
+- `packages/i18n/src/cache/lru.ts` — `LruCache`, the bounded recency cache.
+- `packages/i18n/src/loader/memory.ts` — `MemoryStore`, the warm tier.
+- `packages/i18n/src/loader/persistent.ts` — `PersistentStore`, the IndexedDB tier.
+- `packages/i18n/src/loader/inflight.ts` — `InflightLoader` and `TimeoutError`.
+- `packages/i18n/src/loader/backend.ts` — `namespaceChunkLoader` and `TieredBackend`.
+
+### Observability, Catalogs, CLI (`obs/`, `catalogs/`, `cli/`)
+
+- `packages/i18n/src/obs/events.ts` — `emit`, the swallowing event dispatcher.
+- `packages/i18n/src/catalogs/index.ts` — `SHARED_NAMESPACES` and `SHELL_NAMESPACES`.
+- `packages/i18n/src/cli/index.ts` — `CLI_PACKAGE`, `CLI_VERSION`, `CLI_COMMANDS`.
+
+### React (`react/`)
+
+- `packages/i18n/src/react/index.ts` — the `/react` entry point.
+- `packages/i18n/src/react/provider.tsx` — `I18nProvider` and `I18nProviderProps`.
+- `packages/i18n/src/react/hooks.ts` — `useT`, `useLocale`, `useI18nRuntime`.
+- `packages/i18n/src/react/trans.tsx` — `Trans` with an injected `t`.
+- `packages/i18n/src/react/context.ts` — `I18nContext`, `I18nContextValue`, `LocaleSnapshot`.
+
+### Next.js (`next/`)
+
+- `packages/i18n/src/next/index.ts` — the `/next` entry point.
+- `packages/i18n/src/next/middleware.ts` — `i18nMiddleware`, `localeStaticParams`, `DEFAULT_COOKIE`.
+- `packages/i18n/src/next/server.ts` — `createI18nServer`, `defineRouteI18n`.
+- `packages/i18n/src/next/html.ts` — `getHtmlAttributes`.
+
+### Vite (`vite/`)
+
+- `packages/i18n/src/vite/index.ts` — the `/vite` entry point.
+- `packages/i18n/src/vite/plugin.ts` — `i18nVitePlugin` and the manifest types.
+- `packages/i18n/src/vite/routes.ts` — `localePrefix`, `matchLocaleFromPath`, `resolveLocaleOrNull`.
+
+### Stores and Stubs (`store/`, `stubs/`)
+
+- `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` and `LocaleStore`.
+- `packages/i18n/src/store/redux.ts` — `localeSlice`, actions, and selectors.
+- `packages/i18n/src/stubs/native.ts` — `createNativeI18n` (throws until v1.1).
+- `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (throws until v1.2).
+- `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (throws until v1.3).
+
+### Generated Types
+
+- `packages/i18n/src/@types/i18next.d.ts` — i18next `CustomTypeOptions` augmentation.
+- `packages/i18n/src/@types/resources.d.ts` — generated key tree for typed `t()`.
+
+## Tests
+
+- `packages/i18n/src/__tests__/core/create-i18n.test.ts` — runtime construction and defaults.
+- `packages/i18n/src/__tests__/core/locale.test.ts` — locale parsing and direction.
+- `packages/i18n/src/__tests__/core/prefetch.test.ts` — prefetch behavior and deduplication.
+- `packages/i18n/src/__tests__/cache/lru.test.ts` — capacity and eviction order.
+- `packages/i18n/src/__tests__/loader/memory.test.ts` — warm tier.
+- `packages/i18n/src/__tests__/loader/persistent.test.ts` — IndexedDB tier and no-op fallback.
+- `packages/i18n/src/__tests__/loader/inflight.test.ts` — dedupe, timeout, and retry.
+- `packages/i18n/src/__tests__/loader/backend.test.ts` — tier ordering and events.
+- `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — `namespaceChunkLoader` resolution.
+- `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — shared/package specifiers.
+- `packages/i18n/src/__tests__/catalogs/parity.test.ts` — en/ar key parity and budgets.
+- `packages/i18n/src/__tests__/budget/kernel.test.ts` — kernel budget constant.
+- `packages/i18n/src/__tests__/react/provider.test.tsx` — provider and hooks.
+- `packages/i18n/src/__tests__/next/middleware.test.ts` — redirect decisions.
+- `packages/i18n/src/__tests__/next/html.test.ts` — `getHtmlAttributes`.
+- `packages/i18n/src/__tests__/vite/plugin.test.ts` — manifest scanning and emission.
+- `packages/i18n/src/__tests__/vite/routes.test.ts` — route helpers.
+- `packages/i18n/src/__tests__/types/keys.test-d.ts` — compile-time key type checks.
+
+## Catalogs
+
+- `packages/i18n/catalogs/en/common.json` — English shell strings shared by every app.
+- `packages/i18n/catalogs/en/errors.json` — English error strings for the shell.
+- `packages/i18n/catalogs/en/auth.json` — English authentication strings (lazy).
+- `packages/i18n/catalogs/en/validation.json` — English validation strings (lazy).
+- `packages/i18n/catalogs/en/datetime.json` — English date/time strings (lazy).
+- `packages/i18n/catalogs/ar/common.json` — Arabic shell strings.
+- `packages/i18n/catalogs/ar/errors.json` — Arabic error strings for the shell.
+- `packages/i18n/catalogs/ar/auth.json` — Arabic authentication strings (lazy).
+- `packages/i18n/catalogs/ar/validation.json` — Arabic validation strings (lazy).
+- `packages/i18n/catalogs/ar/datetime.json` — Arabic date/time strings (lazy).
+
+## Contract App: next-web
+
+- `apps/next-web/package.json` — app scripts and dependencies.
+- `apps/next-web/next.config.ts` — Next configuration for the contract app.
+- `apps/next-web/tsconfig.json` — app TypeScript project.
+- `apps/next-web/src/i18n.ts` — runtime and static backend wiring.
+- `apps/next-web/src/proxy.ts` — middleware adapting `i18nMiddleware` to `NextResponse`.
+- `apps/next-web/src/app/[lng]/layout.tsx` — root layout setting `lang`/`dir` and shell load.
+- `apps/next-web/src/app/[lng]/page.tsx` — server component translating with `getT`.
+- `apps/next-web/src/__tests__/server-locale.test.ts` — zero-flicker html attribute assertions.
+
+## Contract App: vite-web
+
+- `apps/vite-web/package.json` — app scripts and dependencies.
+- `apps/vite-web/vite.config.ts` — Vite config with React and the i18n plugin.
+- `apps/vite-web/vitest.setup.ts` — jsdom test setup.
+- `apps/vite-web/tsconfig.json` — app TypeScript project.
+- `apps/vite-web/index.html` — the SPA HTML shell.
+- `apps/vite-web/src/main.tsx` — React root and router mount.
+- `apps/vite-web/src/routes.tsx` — route table with `LocaleGuard`.
+- `apps/vite-web/src/locale-guard.tsx` — the CSR zero-flicker guard.
+- `apps/vite-web/src/i18n.ts` — runtime and static backend wiring.
+- `apps/vite-web/src/pages/Home.tsx` — home page using `I18nProvider` and `useT`.
+- `apps/vite-web/src/pages/Settings.tsx` — settings page using `useLocale` and `changeLocale`.
+- `apps/vite-web/src/__tests__/locale-guard.test.tsx` — guard render states.
+
+## Docs App: apps/docs
+
+- `apps/docs/package.json` — docs app scripts (`dev`, `build`, `test`, `typecheck`).
+- `apps/docs/next.config.mjs` — Next config wrapped with `createMDX`.
+- `apps/docs/postcss.config.mjs` — Tailwind PostCSS pipeline.
+- `apps/docs/tsconfig.json` — docs app TypeScript project.
+- `apps/docs/README.md` — how to run the documentation app.
+- `apps/docs/proxy.ts` — FumaDocs i18n middleware.
+- `apps/docs/lib/i18n.ts` — `defineI18n` locale definition (en/ar).
+- `apps/docs/lib/dir.ts` — the `dirFor` helper for the docs site.
+- `apps/docs/lib/source.ts` — the FumaDocs loader and source.
+- `apps/docs/lib/layout.shared.tsx` — shared layout options and translations.
+- `apps/docs/components/mdx.tsx` — MDX component registry including `AutoTypeTable`.
+- `apps/docs/app/[lang]/layout.tsx` — root layout for both locales.
+- `apps/docs/app/[lang]/[[...slug]]/page.tsx` — MDX page renderer.
+- `apps/docs/app/api/search/route.ts` — the i18n search API route.
+- `apps/docs/app/global.css` — global styles and RTL overrides.
+- `apps/docs/scripts/check-parity.mjs` — en/ar page parity checker.
+- `apps/docs/scripts/check-rtl.mjs` — built-HTML direction checker.
+- `apps/docs/scripts/check-file-map.mjs` — this coverage checker.
+
+## Related
+
+- [API Index](/appendix/api-index)
+- [Glossary](/appendix/glossary)
+- [Troubleshooting](/appendix/troubleshooting)

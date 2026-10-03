@@ -1,0 +1,120 @@
+---
+title: فهرس واجهة البرمجة
+description: كل تصدير عام مجمّعاً حسب المسار الفرعي، مع روابط إلى الصفحة المالكة.
+---
+
+## اصطلاح AutoTypeTable
+
+تعرض صفحات النواة والمُهايئات جداول أنواع حية عبر مكوّن خادم React المسمّى `AutoTypeTable` من
+FumaDocs. ومسار `path` **نسبي إلى دليل عمل `apps/docs`** لا إلى الصفحة الحالية:
+
+```mdx
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nRuntime" />
+```
+
+- يشير `path` إلى ملف الإعلان، مثل `../../packages/i18n/src/core/types.ts`.
+- و`name` هو اسم النوع المُصدَّر المراد عرضه.
+- المكوّن مسجَّل في `apps/docs/components/mdx.tsx` مع مولِّد وذاكرة مؤقتة على نظام الملفات في
+  `.next/fumadocs-typescript`.
+- لا يوجد ملف `source.config.ts` مرافق؛ وتبقى واجهة Macro في FumaDocs (`defineDocs`) مصدر المحتوى
+  الوحيد.
+
+## الجذر — `@faang/i18n`
+
+| التصدير | النوع | الصفحة |
+|---|---|---|
+| `createI18n` | دالة | [createI18n()](/packages/kernel/create-i18n) |
+| `resolveConfig` | دالة | [resolveConfig()](/packages/kernel/resolve-config) |
+| `resolveLocale` | دالة | [بروتوكول اللغة](/packages/kernel/locale-protocol) |
+| `dirFor` | دالة | [بروتوكول اللغة](/packages/kernel/locale-protocol) |
+| `assertSupportedLocale` | دالة | [بروتوكول اللغة](/packages/kernel/locale-protocol) |
+| `SUPPORTED_LOCALES` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `DEFAULT_LOCALE` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `DEFAULT_NS` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `RTL_LOCALES` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `NS_ID_PATTERN` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `BUDGETS` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `LOADER` | ثابت | [الافتراضات](/packages/kernel/defaults) |
+| `LruCache` | صنف | [LruCache](/packages/cache/lru) |
+| `MemoryStore` | صنف | [MemoryStore](/packages/loader/memory) |
+| `PersistentStore` | صنف | [PersistentStore](/packages/loader/persistent) |
+| `InflightLoader` | صنف | [InflightLoader](/packages/loader/inflight) |
+| `TimeoutError` | صنف | [InflightLoader](/packages/loader/inflight) |
+| `TieredBackend` | صنف | [TieredBackend](/packages/loader/backend) |
+| `namespaceChunkLoader` | دالة | [TieredBackend](/packages/loader/backend) |
+| `emit` | دالة | [المراقبة](/architecture/observability) |
+| `Dir` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `DefaultLocale` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `Namespace` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `I18nEvent` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `CreateI18nConfig` | نوع | [createI18n()](/packages/kernel/create-i18n) |
+| `ResolvedConfig` | نوع | [resolveConfig()](/packages/kernel/resolve-config) |
+| `I18nRuntime` | نوع | [createI18n()](/packages/kernel/create-i18n) |
+| `I18nBackend` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `NamespaceResources` | نوع | [الأنواع الأساسية](/packages/kernel/types) |
+| `NamespaceLoader` | نوع | [TieredBackend](/packages/loader/backend) |
+| `TieredBackendOptions` | نوع | [TieredBackend](/packages/loader/backend) |
+
+## React — `@faang/i18n/react`
+
+| التصدير | النوع | الصفحة |
+|---|---|---|
+| `I18nProvider` | مكوّن | [I18nProvider](/packages/react/provider) |
+| `I18nProviderProps` | نوع | [I18nProvider](/packages/react/provider) |
+| `useT` | خطاف | [الخطافات](/packages/react/hooks) |
+| `useLocale` | خطاف | [الخطافات](/packages/react/hooks) |
+| `useI18nRuntime` | خطاف | [الخطافات](/packages/react/hooks) |
+| `Trans` | مكوّن | [Trans](/packages/react/trans) |
+| `I18nContext` | ثابت | [السياق](/packages/react/context) |
+| `I18nContextValue` | نوع | [السياق](/packages/react/context) |
+| `LocaleSnapshot` | نوع | [السياق](/packages/react/context) |
+
+## Next.js — `@faang/i18n/next`
+
+| التصدير | النوع | الصفحة |
+|---|---|---|
+| `i18nMiddleware` | دالة | [وسيطة إعادة التوجيه](/packages/next/middleware) |
+| `localeStaticParams` | دالة | [وسيطة إعادة التوجيه](/packages/next/middleware) |
+| `DEFAULT_COOKIE` | ثابت | [وسيطة إعادة التوجيه](/packages/next/middleware) |
+| `I18nRequest` | نوع | [وسيطة إعادة التوجيه](/packages/next/middleware) |
+| `I18nRedirect` | نوع | [وسيطة إعادة التوجيه](/packages/next/middleware) |
+| `createI18nServer` | دالة | [مساعدات الخادم](/packages/next/server) |
+| `defineRouteI18n` | دالة | [مساعدات الخادم](/packages/next/server) |
+| `getHtmlAttributes` | دالة | [سمات HTML](/packages/next/html) |
+
+## Vite — `@faang/i18n/vite`
+
+| التصدير | النوع | الصفحة |
+|---|---|---|
+| `i18nVitePlugin` | دالة | [إضافة Vite للبيان](/packages/vite/plugin) |
+| `I18nVitePluginOptions` | نوع | [إضافة Vite للبيان](/packages/vite/plugin) |
+| `I18nManifest` | نوع | [إضافة Vite للبيان](/packages/vite/plugin) |
+| `localePrefix` | دالة | [مساعدات توجيه Vite](/packages/vite/routes) |
+| `matchLocaleFromPath` | دالة | [مساعدات توجيه Vite](/packages/vite/routes) |
+| `resolveLocaleOrNull` | دالة | [مساعدات توجيه Vite](/packages/vite/routes) |
+| `resolveLocale` | إعادة تصدير | [مساعدات توجيه Vite](/packages/vite/routes) |
+
+## المتاجر وهياكل المنصات
+
+| المسار الفرعي | التصدير | النوع | الصفحة |
+|---|---|---|---|
+| `@faang/i18n/zustand` | `createZustandLocaleStore` | دالة | [متجر Zustand](/packages/store/zustand) |
+| `@faang/i18n/zustand` | `LocaleStore` | نوع | [متجر Zustand](/packages/store/zustand) |
+| `@faang/i18n/zustand` | `LocaleSnapshot` | نوع | [متجر Zustand](/packages/store/zustand) |
+| `@faang/i18n/redux` | `localeSlice` | ثابت | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/redux` | `localeChanged` | إجراء | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/redux` | `localeStatusChanged` | إجراء | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/redux` | `selectLocale` | محدد | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/redux` | `selectDir` | محدد | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/redux` | `LocaleState` | نوع | [متجر Redux](/packages/store/redux) |
+| `@faang/i18n/native` | `createNativeI18n` | دالة | [هياكل المنصات](/packages/stubs) |
+| `@faang/i18n/node` | `createNodeI18n` | دالة | [هياكل المنصات](/packages/stubs) |
+| `@faang/i18n/electron` | `createElectronI18n` | دالة | [هياكل المنصات](/packages/stubs) |
+| `@faang/i18n/cli` | `CLI_PACKAGE` و`CLI_VERSION` و`CLI_COMMANDS` | ثابت | [i18next-cli](/packages/tooling/i18next-cli) |
+| `@faang/i18n/catalogs/*` | JSON الكتالوجات | بيانات | [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets) |
+
+## ذو صلة
+
+- [الأنواع الأساسية](/packages/kernel/types)
+- [المصطلحات](/appendix/glossary)
+- [خريطة الملفات](/appendix/file-map)

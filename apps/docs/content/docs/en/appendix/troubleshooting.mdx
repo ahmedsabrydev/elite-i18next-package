@@ -1,0 +1,87 @@
+---
+title: Troubleshooting
+description: Common symptoms, their causes, and the fix for each.
+---
+
+## Missing keys in the UI
+
+**Symptom:** the page shows a raw key like `dashboard.title`.
+
+**Causes and fixes:**
+
+| Cause | Fix |
+|---|---|
+| Namespace not loaded before render | Await `defineRouteI18n`/`getT` on the server, or call `runtime.prefetch(lng, ns)` on the client |
+| Key absent from the catalog | Run `pnpm i18n:extract`, then fill both locales |
+| Key present only in one locale | Run `pnpm i18n:status` and add the key to the other locale |
+| Wrong namespace | Pass `ns` to `useT(ns)` or use `t('ns:key')` |
+| Catalog path wrong | Verify `catalogs.public` / `catalogs.shared` point at real directories |
+
+A missing key with no fallback resolves to the key itself (`returnNull: false`), which is why you see
+the raw key rather than blank text.
+
+## Wrong direction (LTR page flips to RTL after load)
+
+**Symptom:** an Arabic page paints left-to-right then jumps.
+
+**Cause:** direction is being set on the client after hydration instead of in the server response.
+
+**Fix:** set `<html lang dir>` from `getHtmlAttributes(lng)` in the root layout (Next), or use a
+`LocaleGuard` that applies `document.documentElement.dir` before rendering children (Vite). See
+[Zero-Flicker Rendering](/architecture/zero-flicker).
+
+## Stale catalog after a deploy
+
+**Symptom:** users see old strings after you publish new ones.
+
+**Cause:** IndexedDB cached the namespace, and no hash comparison invalidated it.
+
+**Fix:** the hash protocol exists in `PersistentStore` but the tiered backend does not pass a hash
+yet (a recorded deferral). Until it is wired, call `persistent.clear()` on deploy or version your
+catalog paths. The Vite manifest gives you the hashes to compare against.
+
+## Budget exceeded
+
+**Symptom:** `pnpm budget` prints `Budget failures: ...` and exits 1.
+
+**Causes and fixes:**
+
+| Failing scope | Fix |
+|---|---|
+| kernel `dist/index.js` | Remove unused imports; ensure optional runtimes stay behind subpath exports |
+| shell | Move route-specific strings out of `common`/`errors` |
+| namespace | Shorten keys/values, or split the namespace |
+| `dist/index.js missing` | Run `pnpm build` before `pnpm budget` |
+
+See [Performance Budgets](/guides/performance-budgets).
+
+## Extract drift in CI
+
+**Symptom:** `pnpm i18n:extract --ci --dry-run` fails.
+
+**Cause:** source keys changed without regenerating catalogs.
+
+**Fix:** run `pnpm i18n:extract` locally, commit the catalog changes, then `pnpm i18n:types`. If docs
+prose is being scanned, confirm `apps/docs/**` is in the `ignore` list of `i18next.config.ts`.
+
+## Hooks throw `useLocale must be used within an <I18nProvider>`
+
+**Cause:** a component calls `useT`/`useLocale`/`useI18nRuntime` outside the provider.
+
+**Fix:** mount `I18nProvider` higher in the tree. In Next, the server helpers replace the provider for
+server components; the client subtree still needs a provider if it uses hooks.
+
+## Middleware redirect loop
+
+**Cause:** the matcher sends already-prefixed paths back through the middleware, or the locale list is
+empty.
+
+**Fix:** keep API and static-asset exclusions in `config.matcher`, and ensure `locales` is non-empty.
+`i18nMiddleware` returns `undefined` for paths that already start with a locale, so a loop usually
+means a misconfigured matcher.
+
+## Related
+
+- [Security and Failure Modes](/architecture/security-and-failure)
+- [Observability](/architecture/observability)
+- [Glossary](/appendix/glossary)

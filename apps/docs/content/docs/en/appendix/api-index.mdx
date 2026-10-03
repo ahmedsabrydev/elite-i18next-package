@@ -1,0 +1,120 @@
+---
+title: API Index
+description: Every public export grouped by subpath, with links to the owning page.
+---
+
+## The AutoTypeTable Convention
+
+Kernel and adapter pages render live type tables with FumaDocs' `AutoTypeTable` React Server
+Component. Its `path` is **relative to the `apps/docs` working directory**, not to the current page:
+
+```mdx
+<AutoTypeTable path="../../packages/i18n/src/core/types.ts" name="I18nRuntime" />
+```
+
+- `path` points at the declaration file, e.g. `../../packages/i18n/src/core/types.ts`.
+- `name` is the exported type name to render.
+- The component is registered in `apps/docs/components/mdx.tsx` with a generator and a filesystem
+  cache at `.next/fumadocs-typescript`.
+- There is no `source.config.ts` companion; FumaDocs' Macro API (`defineDocs`) remains the sole
+  content source.
+
+## Root — `@faang/i18n`
+
+| Export | Kind | Page |
+|---|---|---|
+| `createI18n` | function | [createI18n()](/packages/kernel/create-i18n) |
+| `resolveConfig` | function | [resolveConfig()](/packages/kernel/resolve-config) |
+| `resolveLocale` | function | [Locale Protocol](/packages/kernel/locale-protocol) |
+| `dirFor` | function | [Locale Protocol](/packages/kernel/locale-protocol) |
+| `assertSupportedLocale` | function | [Locale Protocol](/packages/kernel/locale-protocol) |
+| `SUPPORTED_LOCALES` | const | [Defaults](/packages/kernel/defaults) |
+| `DEFAULT_LOCALE` | const | [Defaults](/packages/kernel/defaults) |
+| `DEFAULT_NS` | const | [Defaults](/packages/kernel/defaults) |
+| `RTL_LOCALES` | const | [Defaults](/packages/kernel/defaults) |
+| `NS_ID_PATTERN` | const | [Defaults](/packages/kernel/defaults) |
+| `BUDGETS` | const | [Defaults](/packages/kernel/defaults) |
+| `LOADER` | const | [Defaults](/packages/kernel/defaults) |
+| `LruCache` | class | [LruCache](/packages/cache/lru) |
+| `MemoryStore` | class | [MemoryStore](/packages/loader/memory) |
+| `PersistentStore` | class | [PersistentStore](/packages/loader/persistent) |
+| `InflightLoader` | class | [InflightLoader](/packages/loader/inflight) |
+| `TimeoutError` | class | [InflightLoader](/packages/loader/inflight) |
+| `TieredBackend` | class | [TieredBackend](/packages/loader/backend) |
+| `namespaceChunkLoader` | function | [TieredBackend](/packages/loader/backend) |
+| `emit` | function | [Observability](/architecture/observability) |
+| `Dir` | type | [Core Types](/packages/kernel/types) |
+| `DefaultLocale` | type | [Core Types](/packages/kernel/types) |
+| `Namespace` | type | [Core Types](/packages/kernel/types) |
+| `I18nEvent` | type | [Core Types](/packages/kernel/types) |
+| `CreateI18nConfig` | type | [createI18n()](/packages/kernel/create-i18n) |
+| `ResolvedConfig` | type | [resolveConfig()](/packages/kernel/resolve-config) |
+| `I18nRuntime` | type | [createI18n()](/packages/kernel/create-i18n) |
+| `I18nBackend` | type | [Core Types](/packages/kernel/types) |
+| `NamespaceResources` | type | [Core Types](/packages/kernel/types) |
+| `NamespaceLoader` | type | [TieredBackend](/packages/loader/backend) |
+| `TieredBackendOptions` | type | [TieredBackend](/packages/loader/backend) |
+
+## React — `@faang/i18n/react`
+
+| Export | Kind | Page |
+|---|---|---|
+| `I18nProvider` | component | [I18nProvider](/packages/react/provider) |
+| `I18nProviderProps` | type | [I18nProvider](/packages/react/provider) |
+| `useT` | hook | [Hooks](/packages/react/hooks) |
+| `useLocale` | hook | [Hooks](/packages/react/hooks) |
+| `useI18nRuntime` | hook | [Hooks](/packages/react/hooks) |
+| `Trans` | component | [Trans](/packages/react/trans) |
+| `I18nContext` | const | [Context](/packages/react/context) |
+| `I18nContextValue` | type | [Context](/packages/react/context) |
+| `LocaleSnapshot` | type | [Context](/packages/react/context) |
+
+## Next.js — `@faang/i18n/next`
+
+| Export | Kind | Page |
+|---|---|---|
+| `i18nMiddleware` | function | [Redirect Middleware](/packages/next/middleware) |
+| `localeStaticParams` | function | [Redirect Middleware](/packages/next/middleware) |
+| `DEFAULT_COOKIE` | const | [Redirect Middleware](/packages/next/middleware) |
+| `I18nRequest` | type | [Redirect Middleware](/packages/next/middleware) |
+| `I18nRedirect` | type | [Redirect Middleware](/packages/next/middleware) |
+| `createI18nServer` | function | [Server Helpers](/packages/next/server) |
+| `defineRouteI18n` | function | [Server Helpers](/packages/next/server) |
+| `getHtmlAttributes` | function | [HTML Attributes](/packages/next/html) |
+
+## Vite — `@faang/i18n/vite`
+
+| Export | Kind | Page |
+|---|---|---|
+| `i18nVitePlugin` | function | [Vite Manifest Plugin](/packages/vite/plugin) |
+| `I18nVitePluginOptions` | type | [Vite Manifest Plugin](/packages/vite/plugin) |
+| `I18nManifest` | type | [Vite Manifest Plugin](/packages/vite/plugin) |
+| `localePrefix` | function | [Vite Routing Helpers](/packages/vite/routes) |
+| `matchLocaleFromPath` | function | [Vite Routing Helpers](/packages/vite/routes) |
+| `resolveLocaleOrNull` | function | [Vite Routing Helpers](/packages/vite/routes) |
+| `resolveLocale` | re-export | [Vite Routing Helpers](/packages/vite/routes) |
+
+## Stores and Platform Stubs
+
+| Subpath | Export | Kind | Page |
+|---|---|---|---|
+| `@faang/i18n/zustand` | `createZustandLocaleStore` | function | [Zustand Store](/packages/store/zustand) |
+| `@faang/i18n/zustand` | `LocaleStore` | type | [Zustand Store](/packages/store/zustand) |
+| `@faang/i18n/zustand` | `LocaleSnapshot` | type | [Zustand Store](/packages/store/zustand) |
+| `@faang/i18n/redux` | `localeSlice` | const | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/redux` | `localeChanged` | action | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/redux` | `localeStatusChanged` | action | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/redux` | `selectLocale` | selector | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/redux` | `selectDir` | selector | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/redux` | `LocaleState` | type | [Redux Store](/packages/store/redux) |
+| `@faang/i18n/native` | `createNativeI18n` | function | [Platform Stubs](/packages/stubs) |
+| `@faang/i18n/node` | `createNodeI18n` | function | [Platform Stubs](/packages/stubs) |
+| `@faang/i18n/electron` | `createElectronI18n` | function | [Platform Stubs](/packages/stubs) |
+| `@faang/i18n/cli` | `CLI_PACKAGE`, `CLI_VERSION`, `CLI_COMMANDS` | const | [i18next-cli](/packages/tooling/i18next-cli) |
+| `@faang/i18n/catalogs/*` | catalog JSON | data | [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets) |
+
+## Related
+
+- [Core Types](/packages/kernel/types)
+- [Glossary](/appendix/glossary)
+- [File Map](/appendix/file-map)

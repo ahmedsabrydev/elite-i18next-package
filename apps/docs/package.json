@@ -7,7 +7,7 @@
     "prebuild": "node scripts/check-parity.mjs",
     "build": "next build && node scripts/check-rtl.mjs",
     "start": "next start -p 4000",
-    "test": "node scripts/check-parity.mjs",
+    "test": "node scripts/check-parity.mjs && node scripts/check-file-map.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

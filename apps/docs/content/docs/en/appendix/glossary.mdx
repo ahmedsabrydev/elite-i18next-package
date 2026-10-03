@@ -1,0 +1,38 @@
+---
+title: Glossary
+description: The exact vocabulary used across these docs, with definitions and where each term lives.
+---
+
+## Terms
+
+| Term | Definition | Source |
+|---|---|---|
+| runtime | The single `I18nRuntime` object returned by `createI18n`; owns the i18next instance, resolved config, and loaders | `packages/i18n/src/core/types.ts` |
+| catalog | A directory of namespace JSON files, one directory per locale | `packages/i18n/catalogs/**` |
+| namespace | One JSON file that is one network / dynamic-import unit, e.g. `common` | `packages/i18n/src/core/types.ts` |
+| shell | The namespaces always loaded with the app frame: `common` and `errors` | `packages/i18n/src/catalogs/index.ts` |
+| lazy namespace | A namespace loaded only when a route needs it | `packages/i18n/src/catalogs/index.ts` |
+| locale | A BCP-47-ish language tag such as `en` or `ar-EG`, normalized to its base | `packages/i18n/src/core/locale.ts` |
+| RTL | Right-to-left writing direction, used for `ar`, `he`, `fa`, `ur` | `packages/i18n/src/core/defaults.ts` |
+| flicker | A visible flash of the wrong-language or wrong-direction UI on first paint | `apps/docs/content/docs/en/architecture/zero-flicker.mdx` |
+| prefetch | Loading a namespace ahead of render without awaiting, deduplicated per locale and namespace | `packages/i18n/src/loader/inflight.ts` |
+| tier | One layer of the load pipeline: memory, persistent, dynamic import, fetch | `packages/i18n/src/loader/backend.ts` |
+| budget | A gzip size limit enforced by `check-budget.mjs` and the `BUDGETS` constant | `packages/i18n/scripts/check-budget.mjs` |
+| manifest | `i18n-manifest.json`, mapping every locale and namespace to a content hash and byte size | `packages/i18n/src/vite/plugin.ts` |
+| hyperlink | A link between documentation pages, written as a root-relative path such as `/packages/kernel/create-i18n` | these docs |
+
+## Related Terms
+
+| Term | Definition |
+|---|---|
+| cache hit | A namespace served from the warm memory tier; emits `ns.cache_hit` |
+| in-flight | A load currently running, shared by concurrent callers of the same key |
+| timeout | Exceeding `LOADER.timeoutMs` (3000ms); emits `ns.timeout` and resolves `undefined` |
+| mirror | The `{ lng, dir, isRtl, status }` store copy that never holds strings |
+| prefix | The leading `/<locale>` segment of a URL |
+
+## Related
+
+- [Architecture Overview](/architecture/overview)
+- [Core Concepts](/getting-started/core-concepts)
+- [Catalogs and Budgets](/packages/tooling/catalogs-and-budgets)

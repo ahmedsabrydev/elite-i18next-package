@@ -1,0 +1,38 @@
+---
+title: المصطلحات
+description: المفردات الدقيقة المستخدمة في هذا التوثيق، مع تعريفاتها وموضع كل مصطلح.
+---
+
+## المصطلحات
+
+| المصطلح | التعريف | المصدر |
+|---|---|---|
+| كائن التشغيل (runtime) | كائن `I18nRuntime` الوحيد الذي تُرجعه `createI18n`؛ يملك نسخة i18next والإعداد المحسوم والمُحمّلات | `packages/i18n/src/core/types.ts` |
+| الكتالوج (catalog) | دليل من ملفات JSON لمساحات الأسماء، دليل واحد لكل لغة | `packages/i18n/catalogs/**` |
+| مساحة الأسماء (namespace) | ملف JSON واحد هو وحدة شبكة أو استيراد ديناميكي واحدة، مثل `common` | `packages/i18n/src/core/types.ts` |
+| القشرة (shell) | مساحات الأسماء المحمّلة دائماً مع إطار التطبيق: `common` و`errors` | `packages/i18n/src/catalogs/index.ts` |
+| مساحة الأسماء الكسولة | مساحة أسماء تُحمَّل فقط عندما يحتاجها مسار | `packages/i18n/src/catalogs/index.ts` |
+| اللغة (locale) | وسم لغة على شكل BCP-47 مثل `en` أو `ar-EG`، يُطبَّع إلى أساسه | `packages/i18n/src/core/locale.ts` |
+| RTL | اتجاه كتابة من اليمين إلى اليسار، يُستخدم لـ `ar` و`he` و`fa` و`ur` | `packages/i18n/src/core/defaults.ts` |
+| الوميض (flicker) | ظهور وميض مرئي لواجهة بلغة أو اتجاه خاطئ عند أول رسم | `apps/docs/content/docs/ar/architecture/zero-flicker.mdx` |
+| الجلب المسبق (prefetch) | تحميل مساحة أسماء قبل الرسم دون انتظار، مع إزالة التكرار لكل لغة ومساحة | `packages/i18n/src/loader/inflight.ts` |
+| الطبقة (tier) | طبقة واحدة من مسار التحميل: الذاكرة، الدائم، الاستيراد الديناميكي، fetch | `packages/i18n/src/loader/backend.ts` |
+| الميزانية (budget) | حد حجم gzip يفرضه `check-budget.mjs` والثابت `BUDGETS` | `packages/i18n/scripts/check-budget.mjs` |
+| البيان (manifest) | `i18n-manifest.json` يربط كل لغة ومساحة أسماء بتجزئة محتوى وحجم بايتات | `packages/i18n/src/vite/plugin.ts` |
+| الارتباط التشعبي (hyperlink) | رابط بين صفحات التوثيق مكتوب كمسار مطلق من الجذر مثل `/packages/kernel/create-i18n` | هذا التوثيق |
+
+## مصطلحات مرتبطة
+
+| المصطلح | التعريف |
+|---|---|
+| إصابة المخزن (cache hit) | مساحة أسماء تُخدَم من طبقة الذاكرة الدافئة؛ تُصدر `ns.cache_hit` |
+| الجاري (in-flight) | تحميل قيد التشغيل يتشاركه المستدعون المتزامنون للمفتاح نفسه |
+| المهلة (timeout) | تجاوز `LOADER.timeoutMs` (3000ms)؛ تُصدر `ns.timeout` وتُحسم إلى `undefined` |
+| المرآة (mirror) | نسخة المتجر `{ lng, dir, isRtl, status }` التي لا تحمل نصوصاً أبداً |
+| البادئة (prefix) | مقطع `/<locale>` البادئ في المسار |
+
+## ذو صلة
+
+- [نظرة عامة على المعمارية](/architecture/overview)
+- [المفاهيم الأساسية](/getting-started/core-concepts)
+- [الكتالوجات والميزانيات](/packages/tooling/catalogs-and-budgets)
