@@ -14,6 +14,7 @@ export type I18nContextValue = {
   locale: string
   snapshot: LocaleSnapshot
   navigate?: (href: string) => void
+  onLocaleChange?: (lng: string) => void
 }
 
 export const I18nContext = createContext<I18nContextValue | null>(null)

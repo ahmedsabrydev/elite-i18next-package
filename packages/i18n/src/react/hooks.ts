@@ -23,10 +23,14 @@ export function useT(ns?: Namespace): TFunction {
 export function useLocale(): LocaleSnapshot & {
   changeLocale: (lng: string) => void
 } {
-  const { snapshot, navigate, runtime } = useI18nContext()
+  const { snapshot, navigate, onLocaleChange, runtime } = useI18nContext()
 
   const changeLocale = useMemo(
     () => (lng: string) => {
+      if (onLocaleChange) {
+        onLocaleChange(lng)
+        return
+      }
       if (typeof window === 'undefined') return
       const { pathname, search, hash } = window.location
       const pattern = new RegExp(`^/(${runtime.config.locales.map(escapeRegExp).join('|')})(?=/|$)`)
@@ -35,7 +39,7 @@ export function useLocale(): LocaleSnapshot & {
       if (navigate) navigate(href)
       else window.location.assign(href)
     },
-    [navigate, runtime],
+    [navigate, onLocaleChange, runtime],
   )
 
   return { ...snapshot, changeLocale }

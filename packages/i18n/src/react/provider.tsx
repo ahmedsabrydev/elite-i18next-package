@@ -8,10 +8,11 @@ export type I18nProviderProps = {
   runtime: I18nRuntime
   locale: string
   navigate?: (href: string) => void
+  onLocaleChange?: (lng: string) => void
   children: ReactNode
 }
 
-export function I18nProvider({ runtime, locale, navigate, children }: I18nProviderProps) {
+export function I18nProvider({ runtime, locale, navigate, onLocaleChange, children }: I18nProviderProps) {
   const snapshot = useMemo<LocaleSnapshot>(
     () => ({
       lng: locale,
@@ -23,8 +24,8 @@ export function I18nProvider({ runtime, locale, navigate, children }: I18nProvid
   )
 
   const value = useMemo(
-    () => ({ runtime, locale, snapshot, navigate }),
-    [runtime, locale, snapshot, navigate],
+    () => ({ runtime, locale, snapshot, navigate, onLocaleChange }),
+    [runtime, locale, snapshot, navigate, onLocaleChange],
   )
 
   return (
