@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "i18n Showcase",
+    "slug": "faang-i18n-showcase",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "faangi18n",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.faang.i18nshowcase" },
+    "android": { "package": "com.faang.i18nshowcase" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-localization"]
+  }
+}
