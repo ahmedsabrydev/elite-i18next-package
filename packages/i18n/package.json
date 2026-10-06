@@ -32,8 +32,8 @@
       "import": "./dist/store/redux.js"
     },
     "./native": {
-      "types": "./dist/stubs/native.d.ts",
-      "import": "./dist/stubs/native.js"
+      "types": "./dist/native/index.d.ts",
+      "import": "./dist/native/index.js"
     },
     "./node": {
       "types": "./dist/stubs/node.d.ts",

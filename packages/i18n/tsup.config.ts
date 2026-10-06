@@ -8,7 +8,7 @@ export default defineConfig({
     'vite/index': 'src/vite/index.ts',
     'store/zustand': 'src/store/zustand.ts',
     'store/redux': 'src/store/redux.ts',
-    'stubs/native': 'src/stubs/native.ts',
+    'native/index': 'src/native/index.ts',
     'stubs/node': 'src/stubs/node.ts',
     'stubs/electron': 'src/stubs/electron.ts',
     'cli/index': 'src/cli/index.ts',
