@@ -1,0 +1,7 @@
+{
+  "title": "مرحبًا بك في عرض i18n",
+  "subtitle": "يوضح هذا التطبيق @faang/i18n على iOS وAndroid.",
+  "greeting": "مرحبًا يا {{name}}",
+  "items_one": "لديك عنصر واحد",
+  "items_other": "لديك {{count}} عناصر"
+}

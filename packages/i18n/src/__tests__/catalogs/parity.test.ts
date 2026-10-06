@@ -5,7 +5,16 @@ import { describe, expect, it } from 'vitest'
 import { BUDGETS, NS_ID_PATTERN, SUPPORTED_LOCALES } from '../../core/defaults'
 
 const CATALOGS = join(import.meta.dirname, '../../../catalogs')
-const SHARED_NAMESPACES = ['auth', 'common', 'datetime', 'errors', 'validation'] as const
+const SHARED_NAMESPACES = [
+  'auth',
+  'common',
+  'datetime',
+  'errors',
+  'validation',
+  'home',
+  'profile',
+  'settings',
+] as const
 
 function readNs(lng: string, ns: string): Record<string, unknown> {
   return JSON.parse(readFileSync(join(CATALOGS, lng, `${ns}.json`), 'utf8')) as Record<string, unknown>
