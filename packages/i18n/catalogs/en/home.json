@@ -1,7 +1,7 @@
 {
-  "title": "Welcome to the i18n showcase",
-  "subtitle": "This app demonstrates @faang/i18n on iOS and Android.",
   "greeting": "Hello, {{name}}",
   "items_one": "You have {{count}} item",
-  "items_other": "You have {{count}} items"
+  "items_other": "You have {{count}} items",
+  "subtitle": "This app demonstrates @faang/i18n on iOS and Android.",
+  "title": "Welcome to the i18n showcase"
 }

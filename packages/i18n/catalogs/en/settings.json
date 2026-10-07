@@ -1,7 +1,7 @@
 {
-  "title": "Settings",
-  "language": "Language",
-  "followSystem": "Follow system language",
   "direction": "Direction",
-  "restartNote": "Native right-to-left layout may require an app restart."
+  "followSystem": "Follow system language",
+  "language": "Language",
+  "restartNote": "Native right-to-left layout may require an app restart.",
+  "title": "Settings"
 }

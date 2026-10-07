@@ -1,7 +1,11 @@
 {
-  "title": "مرحبًا بك في عرض i18n",
-  "subtitle": "يوضح هذا التطبيق @faang/i18n على iOS وAndroid.",
   "greeting": "مرحبًا يا {{name}}",
+  "items_zero": "ليس لديك عناصر",
   "items_one": "لديك عنصر واحد",
-  "items_other": "لديك {{count}} عناصر"
+  "items_two": "لديك عنصران",
+  "items_few": "لديك {{count}} عناصر",
+  "items_many": "لديك {{count}} عنصرًا",
+  "items_other": "لديك {{count}} عناصر",
+  "subtitle": "يوضح هذا التطبيق @faang/i18n على iOS وAndroid.",
+  "title": "مرحبًا بك في عرض i18n"
 }

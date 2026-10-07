@@ -1,7 +1,7 @@
 {
-  "title": "Profile",
-  "name": "Name",
   "email": "Email",
+  "name": "Name",
   "save": "Save",
-  "saved": "Profile saved"
+  "saved": "Profile saved",
+  "title": "Profile"
 }
