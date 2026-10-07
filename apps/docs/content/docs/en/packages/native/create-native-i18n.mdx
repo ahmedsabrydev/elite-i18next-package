@@ -1,0 +1,112 @@
+---
+title: createNativeI18n()
+description: The React Native runtime — device-locale detection, AsyncStorage caching, and RTL via I18nManager.
+---
+
+## Purpose
+
+`createNativeI18n` is the v1.1 React Native entry point. It reuses the kernel `createI18n`, injects the
+device locale, caches namespaces through `AsyncStorage`, and applies text direction with
+`I18nManager`. All platform APIs arrive as dependency-injection ports, so the runtime itself imports
+no React Native module and stays unit-testable.
+
+## When to Use It
+
+Use it in an Expo or bare React Native app. The app supplies the ports from
+`@react-native-async-storage/async-storage`, `expo-localization`, and `react-native`, then passes the
+returned `runtime` to the shared [`I18nProvider`](/packages/react/provider).
+
+## Usage
+
+```tsx
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Localization from 'expo-localization'
+import { AppState, I18nManager } from 'react-native'
+import { createNativeI18n } from '@faang/i18n/native'
+
+const { runtime, controller } = createNativeI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: {
+    'en:common': enCommon,
+    'ar:common': arCommon,
+  },
+  storage: {
+    getItem: (key) => AsyncStorage.getItem(key),
+    setItem: (key, value) => AsyncStorage.setItem(key, value),
+  },
+  localization: {
+    getLocales: () => Localization.getLocales().map((l) => ({ languageTag: l.languageTag })),
+  },
+  rtl: {
+    allowRTL: (allow) => I18nManager.allowRTL(allow),
+    forceRTL: (force) => I18nManager.forceRTL(force),
+  },
+  appState: {
+    addEventListener: (_type, cb) => {
+      const sub = AppState.addEventListener('change', cb)
+      return { remove: () => sub.remove() }
+    },
+  },
+})
+
+const initial = await controller.getInitialLocale()
+```
+
+## API
+
+### `createNativeI18n(config)`
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="CreateNativeI18nConfig" />
+
+Returns `NativeI18n`:
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="NativeI18n" />
+
+### Ports
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeStorage" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeLocalization" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeRtl" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="AppStatePort" />
+
+### Controller
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="NativeController" />
+
+## Parameters and Returns
+
+- `locales` / `defaultLocale` / `fallbackLng` / `defaultNS` mirror the kernel config.
+- `catalogs` is a map keyed `` `${lng}:${ns}` `` of bundled resources.
+- `storage` is the only required port; `localization`, `rtl`, and `appState` are optional.
+- `storageKey` overrides the locale key (default `faang-i18n:locale`).
+- Returns `{ runtime, controller }`, where `runtime` is a full [`I18nRuntime`](/packages/kernel/types).
+
+## Behavior and Edge Cases
+
+- `getInitialLocale` prefers the stored locale, then the first device locale normalized through the
+  kernel `resolveLocale`, then `defaultLocale`. Unsupported stored or device locales are ignored.
+- `setLocale` persists the choice, calls `allowRTL(true)` and `forceRTL(dir === 'rtl')`, loads the
+  default namespace, and emits `{ type: 'locale.switch', from, to }`.
+- Caching (Approach A) happens inside `config.backend.load`: storage is read first, then the bundled
+  catalog, then storage is written through. The kernel `PersistentStore` remains a no-op because
+  `indexedDB` is absent on React Native.
+- `subscribeSystemLocale` listens to `AppState` changes and reports the new device locale.
+
+## Failure Modes
+
+- A corrupt cache entry falls through to the bundled catalog.
+- Storage or RTL port failures are swallowed; the in-memory cache still serves namespaces.
+
+## Budget Notes
+
+The native runtime ships on its own subpath and is not counted against the kernel gzip budget.
+
+## Related
+
+- [I18nProvider](/packages/react/provider)
+- [Hooks](/packages/react/hooks)
+- [Platform Stubs](/packages/stubs)

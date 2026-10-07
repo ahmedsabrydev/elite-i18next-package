@@ -71,11 +71,17 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `packages/i18n/src/vite/plugin.ts` — `i18nVitePlugin` وأنواع البيان.
 - `packages/i18n/src/vite/routes.ts` — `localePrefix` و`matchLocaleFromPath` و`resolveLocaleOrNull`.
 
+### الأصلي (`native/`)
+
+- `packages/i18n/src/native/index.ts` — نقطة دخول `/native`.
+- `packages/i18n/src/native/types.ts` — `CreateNativeI18nConfig` و`NativeController` و`NativeI18n`.
+- `packages/i18n/src/native/ports.ts` — `NativeStorage` و`NativeLocalization` و`NativeRtl` و`AppStatePort`.
+- `packages/i18n/src/native/create-native-i18n.ts` — `createNativeI18n`.
+
 ### المتاجر والهياكل (`store/` و`stubs/`)
 
 - `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` و`LocaleStore`.
 - `packages/i18n/src/store/redux.ts` — `localeSlice` والإجراءات والمحددات.
-- `packages/i18n/src/stubs/native.ts` — `createNativeI18n` (يرمي حتى v1.1).
 - `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (يرمي حتى v1.2).
 - `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (يرمي حتى v1.3).
 
@@ -96,8 +102,10 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `packages/i18n/src/__tests__/loader/backend.test.ts` — ترتيب الطبقات والأحداث.
 - `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — حسم `namespaceChunkLoader`.
 - `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — المُحدِّدات المشتركة/الحزمية.
+- `packages/i18n/src/__tests__/native/create-native-i18n.test.ts` — لغة الجهاز وذاكرة التخزين وRTL وAppState.
 - `packages/i18n/src/__tests__/catalogs/parity.test.ts` — تطابق مفاتيح en/ar والميزانيات.
 - `packages/i18n/src/__tests__/budget/kernel.test.ts` — ثابت ميزانية النواة.
+- `packages/i18n/src/__tests__/react/change-locale.test.tsx` — منفذ `onLocaleChange` للحقن.
 - `packages/i18n/src/__tests__/react/provider.test.tsx` — المُزوّد والخطافات.
 - `packages/i18n/src/__tests__/next/middleware.test.ts` — قرارات إعادة التوجيه.
 - `packages/i18n/src/__tests__/next/html.test.ts` — `getHtmlAttributes`.
@@ -112,11 +120,17 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `packages/i18n/catalogs/en/auth.json` — نصوص المصادقة الإنجليزية (كسولة).
 - `packages/i18n/catalogs/en/validation.json` — نصوص التحقق الإنجليزية (كسولة).
 - `packages/i18n/catalogs/en/datetime.json` — نصوص التاريخ/الوقت الإنجليزية (كسولة).
+- `packages/i18n/catalogs/en/home.json` — نصوص الشاشة الرئيسية الإنجليزية (الجوال).
+- `packages/i18n/catalogs/en/profile.json` — نصوص الملف الشخصي الإنجليزية (الجوال).
+- `packages/i18n/catalogs/en/settings.json` — نصوص الإعدادات الإنجليزية (الجوال).
 - `packages/i18n/catalogs/ar/common.json` — نصوص القشرة العربية.
 - `packages/i18n/catalogs/ar/errors.json` — نصوص الأخطاء العربية للقشرة.
 - `packages/i18n/catalogs/ar/auth.json` — نصوص المصادقة العربية (كسولة).
 - `packages/i18n/catalogs/ar/validation.json` — نصوص التحقق العربية (كسولة).
 - `packages/i18n/catalogs/ar/datetime.json` — نصوص التاريخ/الوقت العربية (كسولة).
+- `packages/i18n/catalogs/ar/home.json` — نصوص الشاشة الرئيسية العربية (الجوال).
+- `packages/i18n/catalogs/ar/profile.json` — نصوص الملف الشخصي العربية (الجوال).
+- `packages/i18n/catalogs/ar/settings.json` — نصوص الإعدادات العربية (الجوال).
 
 ## التطبيق التعاقدي: next-web
 
@@ -143,6 +157,30 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `apps/vite-web/src/pages/Home.tsx` — الصفحة الرئيسية باستخدام `I18nProvider` و`useT`.
 - `apps/vite-web/src/pages/Settings.tsx` — صفحة الإعدادات باستخدام `useLocale` و`changeLocale`.
 - `apps/vite-web/src/__tests__/locale-guard.test.tsx` — حالات تصيير الحارس.
+
+## التطبيق: apps/mobile
+
+- `apps/mobile/package.json` — سكربتات تطبيق Expo واعتمادياته.
+- `apps/mobile/app.json` — إعداد Expo (`newArchEnabled` وإضافة `expo-localization`).
+- `apps/mobile/babel.config.js` — `babel-preset-expo`.
+- `apps/mobile/metro.config.js` — `watchFolders` وحسم الوحدات في المستودع.
+- `apps/mobile/jest.config.js` — إعداد jest-expo وخرائط الوحدات وقواعد التحويل.
+- `apps/mobile/jest.setup.ts` — محاكيات AsyncStorage و`expo-localization`.
+- `apps/mobile/tsconfig.json` — مشروع TypeScript للتطبيق.
+- `apps/mobile/index.ts` — `registerRootComponent(App)`.
+- `apps/mobile/README.md` — كيفية تشغيل العرض التوضيحي.
+- `apps/mobile/src/App.tsx` — هيكل التنقّل مع المُزوّد وشريط الحالة.
+- `apps/mobile/src/i18n/MobileI18nProvider.tsx` — توصيل زمن التشغيل الأصلي ووضع لغة النظام.
+- `apps/mobile/src/i18n/catalogs.ts` — خريطة الكتالوجات الساكنة الممرّرة إلى زمن التشغيل.
+- `apps/mobile/src/i18n/namespaces.ts` — قائمة مساحات أسماء التطبيق.
+- `apps/mobile/src/i18n/native-adapter.ts` — منافذ AsyncStorage/Localization/RTL/AppState الحقيقية.
+- `apps/mobile/src/components/Screen.tsx` — حاوية الشاشة القابلة للتمرير المشتركة.
+- `apps/mobile/src/screens/Home.tsx` — الترحيب والجمع وقراءة اللغة.
+- `apps/mobile/src/screens/Settings.tsx` — مبدّل اللغة ومفتاح اتّباع النظام.
+- `apps/mobile/src/screens/Profile.tsx` — نموذج مع رسائل التحقق.
+- `apps/mobile/src/test-utils/renderWithRuntime.tsx` — مساعد اختبار يركّب `I18nProvider`.
+- `apps/mobile/src/__tests__/App.test.tsx` — إقلاع المُزوّد والتحويل من en إلى ar مع RTL.
+- `apps/mobile/src/__tests__/screens.test.tsx` — تصيير الشاشات والتحقق.
 
 ## تطبيق التوثيق: apps/docs
 

@@ -71,11 +71,17 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `packages/i18n/src/vite/plugin.ts` — `i18nVitePlugin` and the manifest types.
 - `packages/i18n/src/vite/routes.ts` — `localePrefix`, `matchLocaleFromPath`, `resolveLocaleOrNull`.
 
+### Native (`native/`)
+
+- `packages/i18n/src/native/index.ts` — the `/native` entry point.
+- `packages/i18n/src/native/types.ts` — `CreateNativeI18nConfig`, `NativeController`, `NativeI18n`.
+- `packages/i18n/src/native/ports.ts` — `NativeStorage`, `NativeLocalization`, `NativeRtl`, `AppStatePort`.
+- `packages/i18n/src/native/create-native-i18n.ts` — `createNativeI18n`.
+
 ### Stores and Stubs (`store/`, `stubs/`)
 
 - `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` and `LocaleStore`.
 - `packages/i18n/src/store/redux.ts` — `localeSlice`, actions, and selectors.
-- `packages/i18n/src/stubs/native.ts` — `createNativeI18n` (throws until v1.1).
 - `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (throws until v1.2).
 - `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (throws until v1.3).
 
@@ -96,8 +102,10 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `packages/i18n/src/__tests__/loader/backend.test.ts` — tier ordering and events.
 - `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — `namespaceChunkLoader` resolution.
 - `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — shared/package specifiers.
+- `packages/i18n/src/__tests__/native/create-native-i18n.test.ts` — device locale, storage cache, RTL, and AppState.
 - `packages/i18n/src/__tests__/catalogs/parity.test.ts` — en/ar key parity and budgets.
 - `packages/i18n/src/__tests__/budget/kernel.test.ts` — kernel budget constant.
+- `packages/i18n/src/__tests__/react/change-locale.test.tsx` — the `onLocaleChange` DI seam.
 - `packages/i18n/src/__tests__/react/provider.test.tsx` — provider and hooks.
 - `packages/i18n/src/__tests__/next/middleware.test.ts` — redirect decisions.
 - `packages/i18n/src/__tests__/next/html.test.ts` — `getHtmlAttributes`.
@@ -112,11 +120,17 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `packages/i18n/catalogs/en/auth.json` — English authentication strings (lazy).
 - `packages/i18n/catalogs/en/validation.json` — English validation strings (lazy).
 - `packages/i18n/catalogs/en/datetime.json` — English date/time strings (lazy).
+- `packages/i18n/catalogs/en/home.json` — English home-screen strings (mobile).
+- `packages/i18n/catalogs/en/profile.json` — English profile strings (mobile).
+- `packages/i18n/catalogs/en/settings.json` — English settings strings (mobile).
 - `packages/i18n/catalogs/ar/common.json` — Arabic shell strings.
 - `packages/i18n/catalogs/ar/errors.json` — Arabic error strings for the shell.
 - `packages/i18n/catalogs/ar/auth.json` — Arabic authentication strings (lazy).
 - `packages/i18n/catalogs/ar/validation.json` — Arabic validation strings (lazy).
 - `packages/i18n/catalogs/ar/datetime.json` — Arabic date/time strings (lazy).
+- `packages/i18n/catalogs/ar/home.json` — Arabic home-screen strings (mobile).
+- `packages/i18n/catalogs/ar/profile.json` — Arabic profile strings (mobile).
+- `packages/i18n/catalogs/ar/settings.json` — Arabic settings strings (mobile).
 
 ## Contract App: next-web
 
@@ -143,6 +157,30 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `apps/vite-web/src/pages/Home.tsx` — home page using `I18nProvider` and `useT`.
 - `apps/vite-web/src/pages/Settings.tsx` — settings page using `useLocale` and `changeLocale`.
 - `apps/vite-web/src/__tests__/locale-guard.test.tsx` — guard render states.
+
+## App: apps/mobile
+
+- `apps/mobile/package.json` — Expo app scripts and dependencies.
+- `apps/mobile/app.json` — Expo config (`newArchEnabled`, `expo-localization` plugin).
+- `apps/mobile/babel.config.js` — `babel-preset-expo`.
+- `apps/mobile/metro.config.js` — monorepo `watchFolders` and resolution.
+- `apps/mobile/jest.config.js` — jest-expo preset, module mapping, transform rules.
+- `apps/mobile/jest.setup.ts` — AsyncStorage and `expo-localization` mocks.
+- `apps/mobile/tsconfig.json` — app TypeScript project.
+- `apps/mobile/index.ts` — `registerRootComponent(App)`.
+- `apps/mobile/README.md` — how to run the showcase.
+- `apps/mobile/src/App.tsx` — navigation shell with the provider and status bar.
+- `apps/mobile/src/i18n/MobileI18nProvider.tsx` — native runtime wiring and system-language mode.
+- `apps/mobile/src/i18n/catalogs.ts` — static catalog map passed to the runtime.
+- `apps/mobile/src/i18n/namespaces.ts` — the app namespace list.
+- `apps/mobile/src/i18n/native-adapter.ts` — real AsyncStorage/Localization/RTL/AppState ports.
+- `apps/mobile/src/components/Screen.tsx` — shared scrollable screen container.
+- `apps/mobile/src/screens/Home.tsx` — greeting, pluralization, and locale readout.
+- `apps/mobile/src/screens/Settings.tsx` — language switcher and follow-system toggle.
+- `apps/mobile/src/screens/Profile.tsx` — form with validation messages.
+- `apps/mobile/src/test-utils/renderWithRuntime.tsx` — test helper mounting `I18nProvider`.
+- `apps/mobile/src/__tests__/App.test.tsx` — provider boot and en→ar RTL switch.
+- `apps/mobile/src/__tests__/screens.test.tsx` — screen rendering and validation.
 
 ## Docs App: apps/docs
 

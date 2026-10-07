@@ -1,0 +1,99 @@
+---
+title: createNativeI18n()
+description: زمن تشغيل React Native — كشف لغة الجهاز، وتخزين مؤقت عبر AsyncStorage، واتجاه RTL بواسطة I18nManager.
+---
+
+## الغرض
+
+`createNativeI18n` هي نقطة دخول React Native في الإصدار 1.1. تعيد استخدام نواة `createI18n`، وتحقن
+لغة الجهاز، وتخزّن مساحات الأسماء مؤقتًا عبر `AsyncStorage`، وتطبّق اتجاه النص بواسطة `I18nManager`.
+تصل كل واجهات المنصة كمنافذ حقن تبعية، لذا لا يستورد زمن التشغيل أي وحدة React Native ويبقى قابلًا
+للاختبار وحده.
+
+## متى تستخدمها
+
+استخدمها في تطبيق Expo أو React Native. يوفّر التطبيق المنافذ من
+`@react-native-async-storage/async-storage` و`expo-localization` و`react-native`، ثم يمرّر `runtime`
+الناتج إلى [`I18nProvider`](/packages/react/provider) المشترك.
+
+## الاستخدام
+
+```tsx
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Localization from 'expo-localization'
+import { AppState, I18nManager } from 'react-native'
+import { createNativeI18n } from '@faang/i18n/native'
+
+const { runtime, controller } = createNativeI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: {
+    'en:common': enCommon,
+    'ar:common': arCommon,
+  },
+  storage: {
+    getItem: (key) => AsyncStorage.getItem(key),
+    setItem: (key, value) => AsyncStorage.setItem(key, value),
+  },
+})
+
+const initial = await controller.getInitialLocale()
+```
+
+## واجهة البرمجة
+
+### `createNativeI18n(config)`
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="CreateNativeI18nConfig" />
+
+تُعيد `NativeI18n`:
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="NativeI18n" />
+
+### المنافذ
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeStorage" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeLocalization" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="NativeRtl" />
+
+<AutoTypeTable path="../../packages/i18n/src/native/ports.ts" name="AppStatePort" />
+
+### المتحكم
+
+<AutoTypeTable path="../../packages/i18n/src/native/types.ts" name="NativeController" />
+
+## المعاملات والقيم المعادة
+
+- `locales` و`defaultLocale` و`fallbackLng` و`defaultNS` تطابق إعداد النواة.
+- `catalogs` خريطة مفتاحها `` `${lng}:${ns}` `` للموارد المضمّنة.
+- `storage` هو المنفذ الوحيد المطلوب، و`localization` و`rtl` و`appState` اختيارية.
+- `storageKey` يبدّل مفتاح اللغة (الافتراضي `faang-i18n:locale`).
+- تُعيد `{ runtime, controller }` حيث `runtime` هو [`I18nRuntime`](/packages/kernel/types) كامل.
+
+## السلوك والحالات الحدّية
+
+- `getInitialLocale` تفضّل اللغة المخزّنة، ثم أول لغة جهاز تُطبَّع عبر `resolveLocale`، ثم
+  `defaultLocale`. وتُتجاهل اللغات المخزّنة أو لغات الجهاز غير المدعومة.
+- `setLocale` تحفظ الاختيار، وتستدعي `allowRTL(true)` و`forceRTL(dir === 'rtl')`، وتحمّل مساحة
+  الأسماء الافتراضية، وتُصدر `{ type: 'locale.switch', from, to }`.
+- التخزين المؤقت (النهج A) يحدث داخل `config.backend.load`: تُقرأ الذاكرة أولًا، ثم الكتالوج
+  المضمّن، ثم تُكتب الذاكرة. وتبقى `PersistentStore` في النواة بلا أثر لأن `indexedDB` غائب في
+  React Native.
+- `subscribeSystemLocale` تراقب تغيّرات `AppState` وتبلّغ بلغة الجهاز الجديدة.
+
+## أنماط الفشل
+
+- مدخل ذاكرة تالف يتراجع إلى الكتالوج المضمّن.
+- تُبتلع أخطاء منافذ التخزين أو الاتجاه؛ وتبقى الذاكرة الدافئة تخدم مساحات الأسماء.
+
+## ملاحظات الميزانية
+
+يُشحن زمن التشغيل الأصلي على مسار فرعي خاص ولا يُحسب ضمن ميزانية gzip للنواة.
+
+## ذو صلة
+
+- [I18nProvider](/packages/react/provider)
+- [الخطافات](/packages/react/hooks)
+- [هياكل المنصات](/packages/stubs)
