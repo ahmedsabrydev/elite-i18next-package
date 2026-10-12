@@ -40,8 +40,8 @@
       "import": "./dist/stubs/node.js"
     },
     "./electron": {
-      "types": "./dist/stubs/electron.d.ts",
-      "import": "./dist/stubs/electron.js"
+      "types": "./dist/electron/index.d.ts",
+      "import": "./dist/electron/index.js"
     },
     "./catalogs/*": "./catalogs/*",
     "./cli": {
