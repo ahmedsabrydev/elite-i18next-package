@@ -3,6 +3,10 @@ import { Home } from '../screens/Home'
 import { Profile } from '../screens/Profile'
 import { renderWithRuntime } from '../test-utils/renderWithRuntime'
 
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}))
+
 describe('screens', () => {
   it('renders Home in Arabic', async () => {
     await renderWithRuntime(<Home />, 'ar')

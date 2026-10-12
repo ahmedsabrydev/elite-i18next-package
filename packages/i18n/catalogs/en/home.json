@@ -1,7 +1,12 @@
 {
+  "aboutBody": "This screen is translated entirely by @faang/i18n using the home namespace.",
+  "aboutTitle": "About this demo",
+  "currentLanguage": "Current language",
   "greeting": "Hello, {{name}}",
   "items_one": "You have {{count}} item",
   "items_other": "You have {{count}} items",
+  "openProfile": "Open Profile",
+  "openSettings": "Open Settings",
   "subtitle": "This app demonstrates @faang/i18n on iOS and Android.",
   "title": "Welcome to the i18n showcase"
 }

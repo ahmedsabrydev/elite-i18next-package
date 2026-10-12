@@ -1,4 +1,7 @@
 {
+  "aboutBody": "تُترجم هذه الشاشة بالكامل عبر @faang/i18n باستخدام مساحة الأسماء home.",
+  "aboutTitle": "حول هذا العرض",
+  "currentLanguage": "اللغة الحالية",
   "greeting": "مرحبًا يا {{name}}",
   "items_zero": "ليس لديك عناصر",
   "items_one": "لديك عنصر واحد",
@@ -6,6 +9,8 @@
   "items_few": "لديك {{count}} عناصر",
   "items_many": "لديك {{count}} عنصرًا",
   "items_other": "لديك {{count}} عناصر",
+  "openProfile": "افتح الملف الشخصي",
+  "openSettings": "افتح الإعدادات",
   "subtitle": "يوضح هذا التطبيق @faang/i18n على iOS وAndroid.",
   "title": "مرحبًا بك في عرض i18n"
 }

@@ -169,17 +169,22 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `apps/mobile/tsconfig.json` — app TypeScript project.
 - `apps/mobile/index.ts` — `registerRootComponent(App)`.
 - `apps/mobile/README.md` — how to run the showcase.
-- `apps/mobile/src/App.tsx` — navigation shell with the provider and status bar.
+- `apps/mobile/src/App.tsx` — themed navigation shell with a per-screen header language switcher.
+- `apps/mobile/src/navigation.ts` — `RootStackParamList` shared by the stack and screens.
+- `apps/mobile/src/theme.ts` — color, spacing, and radius tokens plus the `textAlign` helper.
 - `apps/mobile/src/i18n/MobileI18nProvider.tsx` — native runtime wiring and system-language mode.
 - `apps/mobile/src/i18n/catalogs.ts` — static catalog map passed to the runtime.
 - `apps/mobile/src/i18n/namespaces.ts` — the app namespace list.
 - `apps/mobile/src/i18n/native-adapter.ts` — real AsyncStorage/Localization/RTL/AppState ports.
-- `apps/mobile/src/components/Screen.tsx` — shared scrollable screen container.
-- `apps/mobile/src/screens/Home.tsx` — greeting, pluralization, and locale readout.
-- `apps/mobile/src/screens/Settings.tsx` — language switcher and follow-system toggle.
+- `apps/mobile/src/components/Screen.tsx` — shared scrollable, width-capped screen container.
+- `apps/mobile/src/components/Card.tsx` — surface container with border and radius.
+- `apps/mobile/src/components/AppButton.tsx` — primary/secondary pressable button.
+- `apps/mobile/src/components/LanguageSwitcher.tsx` — en/ar segmented control bound to `changeLocale`.
+- `apps/mobile/src/screens/Home.tsx` — hero, demo cards, inline switcher, and navigation actions.
+- `apps/mobile/src/screens/Settings.tsx` — language switcher, direction readout, and follow-system toggle.
 - `apps/mobile/src/screens/Profile.tsx` — form with validation messages.
 - `apps/mobile/src/test-utils/renderWithRuntime.tsx` — test helper mounting `I18nProvider`.
-- `apps/mobile/src/__tests__/App.test.tsx` — provider boot and en→ar RTL switch.
+- `apps/mobile/src/__tests__/App.test.tsx` — provider boot, visible switcher, and en→ar RTL switch.
 - `apps/mobile/src/__tests__/screens.test.tsx` — screen rendering and validation.
 
 ## Docs App: apps/docs

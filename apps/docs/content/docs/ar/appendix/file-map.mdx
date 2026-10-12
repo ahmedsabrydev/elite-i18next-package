@@ -169,17 +169,22 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `apps/mobile/tsconfig.json` — مشروع TypeScript للتطبيق.
 - `apps/mobile/index.ts` — `registerRootComponent(App)`.
 - `apps/mobile/README.md` — كيفية تشغيل العرض التوضيحي.
-- `apps/mobile/src/App.tsx` — هيكل التنقّل مع المُزوّد وشريط الحالة.
+- `apps/mobile/src/App.tsx` — هيكل التنقّل المنسّق مع مبدّل لغة في ترويسة كل شاشة.
+- `apps/mobile/src/navigation.ts` — نوع `RootStackParamList` المشترك بين المكدّس والشاشات.
+- `apps/mobile/src/theme.ts` — رموز الألوان والتباعد والحواف مع مساعد `textAlign`.
 - `apps/mobile/src/i18n/MobileI18nProvider.tsx` — توصيل زمن التشغيل الأصلي ووضع لغة النظام.
 - `apps/mobile/src/i18n/catalogs.ts` — خريطة الكتالوجات الساكنة الممرّرة إلى زمن التشغيل.
 - `apps/mobile/src/i18n/namespaces.ts` — قائمة مساحات أسماء التطبيق.
 - `apps/mobile/src/i18n/native-adapter.ts` — منافذ AsyncStorage/Localization/RTL/AppState الحقيقية.
-- `apps/mobile/src/components/Screen.tsx` — حاوية الشاشة القابلة للتمرير المشتركة.
-- `apps/mobile/src/screens/Home.tsx` — الترحيب والجمع وقراءة اللغة.
-- `apps/mobile/src/screens/Settings.tsx` — مبدّل اللغة ومفتاح اتّباع النظام.
+- `apps/mobile/src/components/Screen.tsx` — حاوية شاشة قابلة للتمرير ومحدودة العرض.
+- `apps/mobile/src/components/Card.tsx` — حاوية سطح بحدود وحواف دائرية.
+- `apps/mobile/src/components/AppButton.tsx` — زر أساسي/ثانوي قابل للضغط.
+- `apps/mobile/src/components/LanguageSwitcher.tsx` — مبدّل مقسّم en/ar مرتبط بـ `changeLocale`.
+- `apps/mobile/src/screens/Home.tsx` — واجهة رئيسية وبطاقات عرض ومبدّل مضمّن وأزرار تنقّل.
+- `apps/mobile/src/screens/Settings.tsx` — مبدّل اللغة وقراءة الاتجاه ومفتاح اتّباع النظام.
 - `apps/mobile/src/screens/Profile.tsx` — نموذج مع رسائل التحقق.
 - `apps/mobile/src/test-utils/renderWithRuntime.tsx` — مساعد اختبار يركّب `I18nProvider`.
-- `apps/mobile/src/__tests__/App.test.tsx` — إقلاع المُزوّد والتحويل من en إلى ar مع RTL.
+- `apps/mobile/src/__tests__/App.test.tsx` — إقلاع المُزوّد والمبدّل المرئي والتحويل en→ar مع RTL.
 - `apps/mobile/src/__tests__/screens.test.tsx` — تصيير الشاشات والتحقق.
 
 ## تطبيق التوثيق: apps/docs
