@@ -15,6 +15,26 @@
     "name": "Acme",
     "tagline": "Ship faster"
   },
+  "desktop": {
+    "dialog": {
+      "detail": "Locale: {{lng}}",
+      "message": "Bilingual i18n showcase on Electron",
+      "title": "About this demo"
+    },
+    "menu": {
+      "about": "About",
+      "file": "File",
+      "help": "Help",
+      "language": "Language",
+      "quit": "Quit",
+      "view": "View"
+    },
+    "tray": {
+      "quit": "Quit",
+      "show": "Show window"
+    },
+    "windowTitle": "{{name}} · i18n Showcase"
+  },
   "empty": {
     "body": "Get started by creating your first item.",
     "title": "Nothing here yet"

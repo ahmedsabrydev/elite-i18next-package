@@ -15,6 +15,26 @@
     "name": "أكمي",
     "tagline": "أطلق أسرع"
   },
+  "desktop": {
+    "dialog": {
+      "detail": "اللغة: {{lng}}",
+      "message": "عرض i18n ثنائي اللغة على Electron",
+      "title": "حول هذا العرض"
+    },
+    "menu": {
+      "about": "حول",
+      "file": "ملف",
+      "help": "مساعدة",
+      "language": "اللغة",
+      "quit": "خروج",
+      "view": "عرض"
+    },
+    "tray": {
+      "quit": "خروج",
+      "show": "إظهار النافذة"
+    },
+    "windowTitle": "{{name}} · عرض i18n"
+  },
   "empty": {
     "body": "ابدأ بإنشاء أول عنصر لك.",
     "title": "لا يوجد شيء بعد"
