@@ -78,12 +78,18 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `packages/i18n/src/native/ports.ts` — `NativeStorage` و`NativeLocalization` و`NativeRtl` و`AppStatePort`.
 - `packages/i18n/src/native/create-native-i18n.ts` — `createNativeI18n`.
 
+### Electron (`electron/`)
+
+- `packages/i18n/src/electron/index.ts` — نقطة دخول `/electron`.
+- `packages/i18n/src/electron/types.ts` — `CreateElectronI18nConfig` و`ElectronController` و`ElectronI18n`.
+- `packages/i18n/src/electron/ports.ts` — `ElectronStorage` و`ElectronLocale` و`ElectronSurfaces` و`ElectronMessenger`.
+- `packages/i18n/src/electron/create-electron-i18n.ts` — `createElectronI18n`.
+
 ### المتاجر والهياكل (`store/` و`stubs/`)
 
 - `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` و`LocaleStore`.
 - `packages/i18n/src/store/redux.ts` — `localeSlice` والإجراءات والمحددات.
 - `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (يرمي حتى v1.2).
-- `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (يرمي حتى v1.3).
 
 ### الأنواع المولَّدة
 
@@ -103,6 +109,7 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — حسم `namespaceChunkLoader`.
 - `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — المُحدِّدات المشتركة/الحزمية.
 - `packages/i18n/src/__tests__/native/create-native-i18n.test.ts` — لغة الجهاز وذاكرة التخزين وRTL وAppState.
+- `packages/i18n/src/__tests__/electron/create-electron-i18n.test.ts` — لغة النظام وذاكرة التخزين والأسطح والموصل.
 - `packages/i18n/src/__tests__/catalogs/parity.test.ts` — تطابق مفاتيح en/ar والميزانيات.
 - `packages/i18n/src/__tests__/budget/kernel.test.ts` — ثابت ميزانية النواة.
 - `packages/i18n/src/__tests__/react/change-locale.test.tsx` — منفذ `onLocaleChange` للحقن.
@@ -186,6 +193,46 @@ description: كل ملف مصدري متعقَّب مع غرضه في سطر و�
 - `apps/mobile/src/test-utils/renderWithRuntime.tsx` — مساعد اختبار يركّب `I18nProvider`.
 - `apps/mobile/src/__tests__/App.test.tsx` — إقلاع المُزوّد والمبدّل المرئي والتحويل en→ar مع RTL.
 - `apps/mobile/src/__tests__/screens.test.tsx` — تصيير الشاشات والتحقق.
+
+## التطبيق: apps/desktop
+
+- `apps/desktop/package.json` — سكربتات تطبيق electron-vite واعتمادياته.
+- `apps/desktop/electron.vite.config.ts` — إعداد بناء main وpreload وrenderer.
+- `apps/desktop/vite.renderer.config.ts` — إعداد Vite مستقل لمعاينة العارض.
+- `apps/desktop/vitest.config.ts` — مشاريع Vitest لمجموعتي اختبار main وrenderer.
+- `apps/desktop/vitest.setup.ts` — تهيئة اختبار jsdom مع `cleanup` صريح.
+- `apps/desktop/tsconfig.json` — مراجع مشاريع TypeScript للتطبيق.
+- `apps/desktop/tsconfig.node.json` — مشروع TypeScript لـ main وpreload.
+- `apps/desktop/tsconfig.web.json` — مشروع TypeScript للعارض.
+- `apps/desktop/electron-builder.yml` — بيانات التغليف (لا تُشغَّل في CI).
+- `apps/desktop/.gitignore` — مخرجات البناء ومصنوعات الإصدار المتجاهَلة.
+- `apps/desktop/README.md` — كيفية تشغيل العرض التوضيحي لسطح المكتب.
+- `apps/desktop/src/main/index.ts` — توصيل العملية الرئيسية لزمن التشغيل والقائمة والدرج وIPC.
+- `apps/desktop/src/main/ipc.ts` — معالجات `registerI18nIpc` فوق منفذ الموصل.
+- `apps/desktop/src/main/menu.ts` — `buildApplicationMenu` و`buildTrayMenu` من `t`.
+- `apps/desktop/src/main/catalogs.ts` — خريطة الكتالوجات الساكنة للعملية الرئيسية.
+- `apps/desktop/src/main/ports.ts` — منفذ `Translate` البنيوي المستخدم في بناة القائمة.
+- `apps/desktop/src/main/__tests__/menu.test.ts` — تسميات القائمة تحت en وar.
+- `apps/desktop/src/preload/index.ts` — سطح جسر السياق `desktopI18n`.
+- `apps/desktop/src/preload/index.d.ts` — تنميط `window.desktopI18n` العام.
+- `apps/desktop/src/renderer/index.html` — هيكل HTML للعارض.
+- `apps/desktop/src/renderer/src/App.tsx` — هيكل تبويبي للعارض مع مبدّل اللغة.
+- `apps/desktop/src/renderer/src/main.tsx` — تركيب جذر React.
+- `apps/desktop/src/renderer/src/theme.ts` — رموز الألوان والتباعد والحواف.
+- `apps/desktop/src/renderer/src/i18n/DesktopI18nProvider.tsx` — مُزوّد يلفّ جسر العارض.
+- `apps/desktop/src/renderer/src/i18n/bridge.ts` — جسر `desktopI18n` مع تراجع localStorage.
+- `apps/desktop/src/renderer/src/i18n/catalogs.ts` — خريطة الكتالوجات الساكنة الممرّرة إلى زمن التشغيل.
+- `apps/desktop/src/renderer/src/i18n/namespaces.ts` — قائمة مساحات أسماء العارض.
+- `apps/desktop/src/renderer/src/components/Screen.tsx` — حاوية شاشة مشتركة.
+- `apps/desktop/src/renderer/src/components/Card.tsx` — حاوية سطح بحدود وحواف دائرية.
+- `apps/desktop/src/renderer/src/components/AppButton.tsx` — زر أساسي/ثانوي.
+- `apps/desktop/src/renderer/src/components/LanguageSwitcher.tsx` — مبدّل مقسّم en/ar.
+- `apps/desktop/src/renderer/src/screens/Home.tsx` — واجهة رئيسية وبطاقات عرض وأزرار تنقّل.
+- `apps/desktop/src/renderer/src/screens/Settings.tsx` — مبدّل اللغة وقراءة الاتجاه.
+- `apps/desktop/src/renderer/src/screens/Profile.tsx` — نموذج مع رسائل التحقق.
+- `apps/desktop/src/renderer/src/test-utils/renderWithRuntime.tsx` — مساعد اختبار يركّب المُزوّد.
+- `apps/desktop/src/renderer/src/__tests__/provider.test.tsx` — إقلاع المُزوّد والتحويل en→ar.
+- `apps/desktop/src/renderer/src/__tests__/screens.test.tsx` — تصيير الشاشات والتحقق.
 
 ## تطبيق التوثيق: apps/docs
 

@@ -1,0 +1,112 @@
+---
+title: createElectronI18n()
+description: زمن تشغيل Electron — اكتشاف لغة النظام، والتخزين المؤقت عبر electron-store، وأسطح القائمة والدرج وعنوان النافذة، وموصل IPC.
+---
+
+## الغرض
+
+`createElectronI18n` هو نقطة دخول Electron في الإصدار v1.3. يعيد استخدام `createI18n` من النواة، ويحقن
+لغة النظام من العملية الرئيسية، ويخزّن مساحات الأسماء مؤقتًا عبر `electron-store`، ويطبّق اللغة النشطة
+على الأسطح الأصلية (قائمة التطبيق، وقائمة الدرج، وعنوان النافذة)، ويبثّ التغييرات إلى نوافذ العارض.
+تصل جميع واجهات Electron كمنافذ حقن تبعية، لذا لا يستورد زمن التشغيل وحدة `electron` ويظل قابلًا
+للاختبار.
+
+## متى تستخدمه
+
+استخدمه في العملية الرئيسية لتطبيق Electron. يوفّر التطبيق المنافذ من `electron-store` و`app`
+و`Menu`/`Tray`/`dialog` و`ipcMain`.
+
+## الاستخدام
+
+```ts
+import { app, BrowserWindow, Menu, Tray, dialog, ipcMain } from 'electron'
+import Store from 'electron-store'
+import { createElectronI18n } from '@faang/i18n/electron'
+
+const store = new Store<Record<string, string>>()
+
+const { controller } = createElectronI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { 'en:common': enCommon, 'ar:common': arCommon },
+  storage: {
+    get: async (key) => store.get(key) ?? null,
+    set: async (key, value) => store.set(key, value),
+  },
+  locale: { getSystemLocale: () => app.getLocale() },
+  surfaces: {
+    setWindowTitle: (_lng, t) => BrowserWindow.getAllWindows()[0]?.setTitle(t('app.name')),
+    setApplicationMenu: (_lng, t) => Menu.setApplicationMenu(Menu.buildFromTemplate([])),
+    setTrayMenu: (_lng, t) => tray.setContextMenu(Menu.buildFromTemplate([])),
+    showMessageBox: (lng, t) =>
+      dialog.showMessageBox({ message: t('desktop.dialog.message'), detail: t('desktop.dialog.detail', { lng }) }),
+  },
+  messenger: {
+    broadcast: (lng) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send('i18n:locale-changed', lng)
+    },
+    onLocaleSelected: (cb) => {
+      ipcMain.handle('i18n:set-locale', (_event, lng: string) => cb(lng))
+      return () => ipcMain.removeHandler('i18n:set-locale')
+    },
+  },
+})
+
+const initial = await controller.getInitialLocale()
+```
+
+## واجهة البرمجة
+
+### `createElectronI18n(config)`
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="CreateElectronI18nConfig" />
+
+يُعيد `ElectronI18n`:
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="ElectronI18n" />
+
+### المنافذ
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronStorage" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronLocale" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronSurfaces" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronMessenger" />
+
+### المتحكم
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="ElectronController" />
+
+## المعاملات والقيم المعادة
+
+- `locales` / `defaultLocale` / `fallbackLng` / `defaultNS` تطابق إعداد النواة.
+- `catalogs` خريطة مفاتيحها `` `${lng}:${ns}` `` لموارد الحِزم.
+- `storage` هو المنفذ الوحيد المطلوب؛ و`locale` و`surfaces` و`messenger` اختيارية.
+- `storageKey` يتجاوز مفتاح اللغة (الافتراضي `faang-i18n:locale`).
+- يُعيد `{ runtime, controller }`، حيث `runtime` هو `I18nRuntime` كامل.
+
+## السلوك والحالات الحدّية
+
+- `getInitialLocale` يفضّل اللغة المخزنة، ثم `locale.getSystemLocale()` بعد تطبيعها عبر
+  `resolveLocale`، ثم `defaultLocale`. تُتجاهل اللغات غير المدعومة.
+- `setLocale` يحفظ الاختيار، ويحمّل مساحة الأسماء الافتراضية، ويطبّق `setApplicationMenu`
+  و`setTrayMenu` و`setWindowTitle`، ويبثّ عبر الموصل، ويُصدر `{ type: 'locale.switch', from, to }`.
+- التخزين المؤقت (النهج A) يحدث داخل `config.backend.load`: تُقرأ مساحة التخزين أولًا ثم الحزمة
+  المضمّنة ثم يُكتب خلالها.
+
+## أنماط الفشل
+
+- إدخال تخزين مؤقت تالف يتراجع إلى الحزمة المضمّنة.
+- تُتجاهل أخطاء منفذ التخزين؛ وتظل الذاكرة المؤقتة تخدم مساحات الأسماء.
+
+## ملاحظات الميزانية
+
+يُشحن زمن تشغيل Electron في مسار فرعي خاص ولا يُحتسب ضمن ميزانية النواة.
+
+## ذو صلة
+
+- [I18nProvider](/packages/react/provider)
+- [Hooks](/packages/react/hooks)
+- [Platform Stubs](/packages/stubs)

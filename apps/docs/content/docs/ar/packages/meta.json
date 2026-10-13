@@ -1,1 +1,1 @@
-{ "title": "الحزم", "pages": ["kernel", "cache", "loader", "react", "next", "vite", "native", "store", "stubs", "tooling"] }
+{ "title": "الحزم", "pages": ["kernel", "cache", "loader", "react", "next", "vite", "native", "electron", "store", "stubs", "tooling"] }

@@ -1,19 +1,18 @@
 ---
 title: Platform Stubs
-description: createNodeI18n and createElectronI18n — reserved entry points that throw until later milestones.
+description: createNodeI18n — a reserved entry point that throws until a later milestone.
 ---
 
 ## Purpose
 
-`packages/i18n/src/stubs/` reserves two platform entry points for runtimes the release does not
-implement: Node servers (`node`) and Electron (`electron`). Each exports a single factory that throws
-a clear, milestone-tagged error.
+`packages/i18n/src/stubs/` reserves the `node` platform entry point for a runtime the release does
+not implement. It exports a single factory that throws a clear, milestone-tagged error.
 
 ## When to Use It
 
-You should not use them. They exist so that:
+You should not use it. It exists so that:
 
-- the subpaths `@faang/i18n/node` and `@faang/i18n/electron` resolve in the package exports map, and
+- the subpath `@faang/i18n/node` resolves in the package exports map, and
 - code that reaches for an unimplemented runtime fails loudly at the call site instead of importing
   `undefined` and crashing somewhere unrelated.
 
@@ -31,13 +30,12 @@ createNodeI18n()
 | Export | Subpath | Message | Milestone |
 |---|---|---|---|
 | `createNodeI18n` | `@faang/i18n/node` | `@faang/i18n/node is not implemented in v1...` | v1.2 |
-| `createElectronI18n` | `@faang/i18n/electron` | `@faang/i18n/electron is not implemented in v1...` | v1.3 |
 
 Each function has return type `never`: it always throws.
 
 ## Failure Modes
 
-They always throw `Error` with the message above. There is no silent no-op mode.
+It always throws `Error` with the message above. There is no silent no-op mode.
 
 ## Related
 

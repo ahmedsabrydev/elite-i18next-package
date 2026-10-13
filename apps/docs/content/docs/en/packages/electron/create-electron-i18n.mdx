@@ -1,0 +1,116 @@
+---
+title: createElectronI18n()
+description: The Electron runtime — OS-locale detection, electron-store caching, native menu/tray/window surfaces, and an IPC messenger.
+---
+
+## Purpose
+
+`createElectronI18n` is the v1.3 Electron entry point. It reuses the kernel `createI18n`, injects the
+OS locale from the main process, caches namespaces through `electron-store`, applies the active locale
+to the native surfaces (application menu, tray menu, window title), and broadcasts changes to renderer
+windows. All Electron APIs arrive as dependency-injection ports, so the runtime itself imports no
+`electron` module and stays unit-testable.
+
+## When to Use It
+
+Use it in the Electron **main process**. The app supplies the ports from `electron-store`, `app`,
+`Menu`/`Tray`/`dialog`, and `ipcMain`; the returned `runtime` is only needed when the main process
+renders text directly (for example the menu labels via `t`).
+
+## Usage
+
+```ts
+import { app, BrowserWindow, Menu, Tray, dialog, ipcMain } from 'electron'
+import Store from 'electron-store'
+import { createElectronI18n } from '@faang/i18n/electron'
+
+const store = new Store<Record<string, string>>()
+
+const { controller } = createElectronI18n({
+  locales: ['en', 'ar'] as const,
+  defaultLocale: 'en',
+  catalogs: { 'en:common': enCommon, 'ar:common': arCommon },
+  storage: {
+    get: async (key) => store.get(key) ?? null,
+    set: async (key, value) => store.set(key, value),
+  },
+  locale: { getSystemLocale: () => app.getLocale() },
+  surfaces: {
+    setWindowTitle: (_lng, t) => BrowserWindow.getAllWindows()[0]?.setTitle(t('app.name')),
+    setApplicationMenu: (_lng, t) => Menu.setApplicationMenu(Menu.buildFromTemplate(/* … */ [])),
+    setTrayMenu: (_lng, t) => tray.setContextMenu(Menu.buildFromTemplate(/* … */ [])),
+    showMessageBox: (lng, t) =>
+      dialog.showMessageBox({ message: t('desktop.dialog.message'), detail: t('desktop.dialog.detail', { lng }) }),
+  },
+  messenger: {
+    broadcast: (lng) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send('i18n:locale-changed', lng)
+    },
+    onLocaleSelected: (cb) => {
+      ipcMain.handle('i18n:set-locale', (_event, lng: string) => cb(lng))
+      return () => ipcMain.removeHandler('i18n:set-locale')
+    },
+  },
+})
+
+const initial = await controller.getInitialLocale()
+```
+
+## API
+
+### `createElectronI18n(config)`
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="CreateElectronI18nConfig" />
+
+Returns `ElectronI18n`:
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="ElectronI18n" />
+
+### Ports
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronStorage" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronLocale" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronSurfaces" />
+
+<AutoTypeTable path="../../packages/i18n/src/electron/ports.ts" name="ElectronMessenger" />
+
+### Controller
+
+<AutoTypeTable path="../../packages/i18n/src/electron/types.ts" name="ElectronController" />
+
+## Parameters and Returns
+
+- `locales` / `defaultLocale` / `fallbackLng` / `defaultNS` mirror the kernel config.
+- `catalogs` is a map keyed `` `${lng}:${ns}` `` of bundled resources.
+- `storage` is the only required port; `locale`, `surfaces`, and `messenger` are optional.
+- `storageKey` overrides the locale key (default `faang-i18n:locale`).
+- Returns `{ runtime, controller }`, where `runtime` is a full `I18nRuntime`.
+
+## Behavior and Edge Cases
+
+- `getInitialLocale` prefers the stored locale, then `locale.getSystemLocale()` normalized through the
+  kernel `resolveLocale`, then `defaultLocale`. Unsupported stored or system locales are ignored.
+- `setLocale` persists the choice, loads the default namespace, applies `setApplicationMenu`,
+  `setTrayMenu`, and `setWindowTitle` (each receiving the active `t`), broadcasts through the
+  messenger, and emits `{ type: 'locale.switch', from, to }`.
+- Caching (Approach A) happens inside `config.backend.load`: storage is read first, then the bundled
+  catalog, then storage is written through. The kernel `PersistentStore` remains a no-op because
+  `indexedDB` is absent in Electron's main process.
+- `subscribeSystemLocale` delegates to the optional locale port subscription.
+
+## Failure Modes
+
+- A corrupt cache entry falls through to the bundled catalog.
+- Storage port failures are swallowed; the in-memory cache still serves namespaces.
+
+## Budget Notes
+
+The Electron runtime ships on its own subpath and is not counted against the kernel gzip budget.
+
+## Related
+
+- [I18nProvider](/packages/react/provider)
+- [Hooks](/packages/react/hooks)
+- [Platform Stubs](/packages/stubs)

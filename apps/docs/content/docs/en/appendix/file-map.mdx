@@ -78,12 +78,18 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `packages/i18n/src/native/ports.ts` — `NativeStorage`, `NativeLocalization`, `NativeRtl`, `AppStatePort`.
 - `packages/i18n/src/native/create-native-i18n.ts` — `createNativeI18n`.
 
+### Electron (`electron/`)
+
+- `packages/i18n/src/electron/index.ts` — the `/electron` entry point.
+- `packages/i18n/src/electron/types.ts` — `CreateElectronI18nConfig`, `ElectronController`, `ElectronI18n`.
+- `packages/i18n/src/electron/ports.ts` — `ElectronStorage`, `ElectronLocale`, `ElectronSurfaces`, `ElectronMessenger`.
+- `packages/i18n/src/electron/create-electron-i18n.ts` — `createElectronI18n`.
+
 ### Stores and Stubs (`store/`, `stubs/`)
 
 - `packages/i18n/src/store/zustand.ts` — `createZustandLocaleStore` and `LocaleStore`.
 - `packages/i18n/src/store/redux.ts` — `localeSlice`, actions, and selectors.
 - `packages/i18n/src/stubs/node.ts` — `createNodeI18n` (throws until v1.2).
-- `packages/i18n/src/stubs/electron.ts` — `createElectronI18n` (throws until v1.3).
 
 ### Generated Types
 
@@ -103,6 +109,7 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `packages/i18n/src/__tests__/loader/chunk-loader.test.ts` — `namespaceChunkLoader` resolution.
 - `packages/i18n/src/__tests__/loader/package-specifier.test.ts` — shared/package specifiers.
 - `packages/i18n/src/__tests__/native/create-native-i18n.test.ts` — device locale, storage cache, RTL, and AppState.
+- `packages/i18n/src/__tests__/electron/create-electron-i18n.test.ts` — OS locale, storage cache, surfaces, and messenger.
 - `packages/i18n/src/__tests__/catalogs/parity.test.ts` — en/ar key parity and budgets.
 - `packages/i18n/src/__tests__/budget/kernel.test.ts` — kernel budget constant.
 - `packages/i18n/src/__tests__/react/change-locale.test.tsx` — the `onLocaleChange` DI seam.
@@ -186,6 +193,46 @@ by `apps/docs/scripts/check-file-map.mjs`.
 - `apps/mobile/src/test-utils/renderWithRuntime.tsx` — test helper mounting `I18nProvider`.
 - `apps/mobile/src/__tests__/App.test.tsx` — provider boot, visible switcher, and en→ar RTL switch.
 - `apps/mobile/src/__tests__/screens.test.tsx` — screen rendering and validation.
+
+## App: apps/desktop
+
+- `apps/desktop/package.json` — electron-vite app scripts and dependencies.
+- `apps/desktop/electron.vite.config.ts` — main, preload, and renderer build config.
+- `apps/desktop/vite.renderer.config.ts` — standalone Vite config for the renderer preview.
+- `apps/desktop/vitest.config.ts` — Vitest projects for the main and renderer test suites.
+- `apps/desktop/vitest.setup.ts` — jsdom test setup with explicit `cleanup`.
+- `apps/desktop/tsconfig.json` — app TypeScript project references.
+- `apps/desktop/tsconfig.node.json` — main and preload TypeScript project.
+- `apps/desktop/tsconfig.web.json` — renderer TypeScript project.
+- `apps/desktop/electron-builder.yml` — packaging metadata (not run in CI).
+- `apps/desktop/.gitignore` — ignored build output and release artifacts.
+- `apps/desktop/README.md` — how to run the desktop showcase.
+- `apps/desktop/src/main/index.ts` — main-process wiring of the runtime, menu, tray, and IPC.
+- `apps/desktop/src/main/ipc.ts` — `registerI18nIpc` handlers over the messenger port.
+- `apps/desktop/src/main/menu.ts` — `buildApplicationMenu` and `buildTrayMenu` from a `t`.
+- `apps/desktop/src/main/catalogs.ts` — static catalog map for the main process.
+- `apps/desktop/src/main/ports.ts` — the structural `Translate` seam used by the menu builders.
+- `apps/desktop/src/main/__tests__/menu.test.ts` — menu labels under en and ar.
+- `apps/desktop/src/preload/index.ts` — the `desktopI18n` context-bridge surface.
+- `apps/desktop/src/preload/index.d.ts` — the global `window.desktopI18n` typing.
+- `apps/desktop/src/renderer/index.html` — the renderer HTML shell.
+- `apps/desktop/src/renderer/src/App.tsx` — tabbed renderer shell with the language switcher.
+- `apps/desktop/src/renderer/src/main.tsx` — React root mount.
+- `apps/desktop/src/renderer/src/theme.ts` — color, spacing, and radius tokens.
+- `apps/desktop/src/renderer/src/i18n/DesktopI18nProvider.tsx` — provider wrapping the renderer bridge.
+- `apps/desktop/src/renderer/src/i18n/bridge.ts` — `desktopI18n` bridge with a localStorage fallback.
+- `apps/desktop/src/renderer/src/i18n/catalogs.ts` — static catalog map passed to the runtime.
+- `apps/desktop/src/renderer/src/i18n/namespaces.ts` — the renderer namespace list.
+- `apps/desktop/src/renderer/src/components/Screen.tsx` — shared screen container.
+- `apps/desktop/src/renderer/src/components/Card.tsx` — surface container with border and radius.
+- `apps/desktop/src/renderer/src/components/AppButton.tsx` — primary/secondary button.
+- `apps/desktop/src/renderer/src/components/LanguageSwitcher.tsx` — en/ar segmented control.
+- `apps/desktop/src/renderer/src/screens/Home.tsx` — hero, demo cards, and navigation actions.
+- `apps/desktop/src/renderer/src/screens/Settings.tsx` — language switcher and direction readout.
+- `apps/desktop/src/renderer/src/screens/Profile.tsx` — form with validation messages.
+- `apps/desktop/src/renderer/src/test-utils/renderWithRuntime.tsx` — test helper mounting the provider.
+- `apps/desktop/src/renderer/src/__tests__/provider.test.tsx` — provider boot and en→ar switch.
+- `apps/desktop/src/renderer/src/__tests__/screens.test.tsx` — screen rendering and validation.
 
 ## Docs App: apps/docs
 
