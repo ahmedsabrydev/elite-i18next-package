@@ -4,6 +4,7 @@ import { I18nProvider } from '@faang/i18n/react'
 import { catalogs } from './catalogs'
 import { APP_NAMESPACES } from './namespaces'
 import { getBridge } from './bridge'
+import { colors } from '../theme'
 
 const bridge = getBridge()
 
@@ -59,7 +60,23 @@ export function DesktopI18nProvider({ children }: { children: ReactNode }) {
   )
 
   if (!locale) {
-    return <p role="status">Loading…</p>
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}
+      >
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: '50%',
+            border: `3px solid ${colors.border}`,
+            borderTopColor: colors.primary,
+          }}
+        />
+      </div>
+    )
   }
 
   return (

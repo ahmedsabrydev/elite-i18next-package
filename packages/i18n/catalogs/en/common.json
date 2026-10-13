@@ -47,6 +47,7 @@
   "nav": {
     "billing": "Billing",
     "home": "Home",
+    "profile": "Profile",
     "settings": "Settings",
     "signOut": "Sign out"
   }
